@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import { urlInserimentoOrgano } from "@/lib/pratiche/organiSocialiLink";
 import {
   Download,
   Trash2,
@@ -195,18 +196,7 @@ rappresentante_legale_cap:
     nuovo_rappresentante: false,
   });
 
-  const [nuovoRappLegale, setNuovoRappLegale] =
-    useState({
-      nome_cognome: "",
-      codice_fiscale: "",
-      amministratore_principale: false,
-      luogo_nascita: "",
-      data_nascita: "",
-      citta_residenza: "",
-      indirizzo_residenza: "",
-      provincia: "",
-      cap: "",
-    });
+  const [caricamentoOrgani, setCaricamentoOrgani] = useState(true);
 
  useEffect(() => {
   if (praticaId) {
@@ -271,40 +261,57 @@ async function caricaDocumenti() {
 }
 
 async function caricaAmministratori() {
-  if (!pratica?.cliente_id) {
-    return;
-  }
-
+  if (!pratica?.cliente_id) return;
+  setCaricamentoOrgani(true);
   try {
     const res = await fetch(
       `/api/clienti-organi?cliente_id=${encodeURIComponent(String(pratica.cliente_id))}`,
-      {
-        cache: "no-store",
-      }
+      { cache: "no-store" }
     );
-
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Impossibile leggere gli organi sociali");
 
-    if (!res.ok) {
-      return;
-    }
-
-setRappresentantiLegali(
-  (data.organi || []).filter(
-    (o: any) => o.attivo !== false && o.tipo_ruolo === "R"
-  )
-);
-    
+    const organi = (data.organi || []).filter((o: any) =>
+      o.attivo !== false && o.tipo_ruolo === "R" && o.soggetto_cliente_id && o.soggetto_cliente
+    );
+    setRappresentantiLegali(organi);
+    // Individua automaticamente l'organo principale. Se manca e ne esiste
+    // uno solo, utilizza quello. Con più rappresentanti senza principale,
+    // richiede selezione esplicita.
+    const principale = organi.find((o: any) => o.principale === true);
+    const scelto = principale || (organi.length === 1 ? organi[0] : null);
+    setForm((prev) => {
+      const collegato = organi.find((o: any) => String(o.id) === String(prev.rappresentante_legale_id));
+      const effective = collegato || scelto;
+      const soggetto = effective?.soggetto_cliente;
+      return {
+        ...prev,
+        rappresentante_legale_id: effective?.id || "",
+        rappresentante_legale_nome: soggetto?.ragione_sociale || "",
+        rappresentante_legale_codice_fiscale: soggetto?.codice_fiscale || soggetto?.partita_iva || "",
+        rappresentante_legale_indirizzo: soggetto?.indirizzo || "",
+        rappresentante_legale_citta: soggetto?.citta || "",
+        rappresentante_legale_provincia: soggetto?.provincia || "",
+        rappresentante_legale_cap: soggetto?.cap || "",
+        nuovo_rappresentante: false,
+      };
+    });
   } catch (error: any) {
-    console.error("Errore caricamento amministratori:", error);
-    alert(error.message || "Errore caricamento amministratori");
+    console.error("Errore caricamento organi sociali", error);
+    setMessaggio(error?.message || "Impossibile caricare il rappresentante legale");
+  } finally {
+    setCaricamentoOrgani(false);
   }
 }
-  
+
   async function salvaDatiDocumento(
     e?: React.FormEvent
   ) {
     if (e) e.preventDefault();
+    if (!form.rappresentante_legale_id || !rappresentantiLegali.some(o => String(o.id) === String(form.rappresentante_legale_id))) {
+      setMessaggio("Inserire il rappresentante legale nell'archivio Organi sociali prima di salvare la Determina.");
+      return false;
+    }
 
     setSaving(true);
     setMessaggio("");
@@ -408,86 +415,6 @@ setRappresentantiLegali(
     router.push(`/pratiche/${data.pratica.id}`);
   }
 }
-
-  async function salvaNuovoRappresentante() {
-    try {
-     const res = await fetch(
-  `/api/rapp-legali/${encodeURIComponent(String(pratica.id))}/nuovo-rapp-pratiche`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            studio_id: pratica.studio_id,
-            cliente_id: pratica.cliente_id,
-            ...nuovoRappLegale,
-             amministratore_principale:
-              nuovoRappLegale.amministratore_principale,
-            rappresentante_legale: true,
-          }),
-        }
-      );
-
-      const data = await res.json();
-
-if (!res.ok) {
-  throw new Error(
-    data.error ||
-      data.ok === false && data.error ||
-      "Errore salvataggio rappresentante"
-  );
-}
-
-const rappresentante = data.rappresentante || data.data;
-
-if (!rappresentante?.id) {
-  throw new Error("Rappresentante salvato ma ID non restituito dall'API");
-}
-
-await fetch("/api/clienti-organi", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    cliente_id: pratica.cliente_id,
-    soggetto_cliente_id: rappresentante.id,
-    ruolo: "amministratore",
-    carica: "Amministratore",
-    principale: nuovoRappLegale.amministratore_principale,
-    attivo: true,
-  }),
-});
-      
-setForm((prev) => ({
-  ...prev,
-  rappresentante_legale_id: rappresentante.id,
-  rappresentante_legale_nome:
-    rappresentante.nome_cognome || nuovoRappLegale.nome_cognome || "",
-  rappresentante_legale_codice_fiscale:
-    rappresentante.codice_fiscale || nuovoRappLegale.codice_fiscale || "",
-  rappresentante_legale_indirizzo:
-    rappresentante.indirizzo_residenza || nuovoRappLegale.indirizzo_residenza || "",
-  rappresentante_legale_citta:
-    rappresentante.citta_residenza || nuovoRappLegale.citta_residenza || "",
-  rappresentante_legale_provincia:
-    rappresentante.provincia || nuovoRappLegale.provincia || "",
-  rappresentante_legale_cap:
-    rappresentante.cap || nuovoRappLegale.cap || "",
-  nuovo_rappresentante: false,
-}));
-
-     alert("Rappresentante legale salvato.");
-
-await caricaAmministratori();
-    } catch (error: any) {
-      alert(
-        error.message ||
-          "Errore salvataggio"
-      );
-    }
-  }
 
   const determinaGenerata = documenti.some(
   (doc: any) => doc.tipo_documento === "DETERMINA_AU_CDA"
@@ -747,524 +674,65 @@ await caricaAmministratori();
           </div>
         </div>
 
-        {/* RAPPRESENTANTE LEGALE */}
+        {/* RAPPRESENTANTE LEGALE - SOLO ARCHIVIO ORGANI SOCIALI */}
         <div style={cardStyle}>
-          <h2 style={titleStyle}>
-            Rappresentante legale
-          </h2>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "2fr auto",
-              gap: 12,
-              marginTop: 18,
-              alignItems: "end",
-            }}
-          >
-            <div>
-              <label style={labelStyle}>
-                Seleziona rappresentante
-              </label>
-
-<select
-  style={inputStyle}
-  value={form.rappresentante_legale_id}
-  onChange={(e) => {
-    const selected = rappresentantiLegali.find(
-      (r: any) => String(r.id) === String(e.target.value)
-    );
-
-    if (!selected) return;
-
-    const soggetto = selected.soggetto_cliente;
-
-    setForm((prev) => ({
-      ...prev,
-      rappresentante_legale_id: selected.id,
-      rappresentante_legale_nome: soggetto?.ragione_sociale || "",
-      rappresentante_legale_codice_fiscale:
-        soggetto?.codice_fiscale || soggetto?.partita_iva || "",
-      rappresentante_legale_indirizzo:
-        soggetto?.indirizzo || "",
-      rappresentante_legale_citta:
-        soggetto?.citta || "",
-      rappresentante_legale_provincia:
-        soggetto?.provincia || "",
-      rappresentante_legale_cap:
-        soggetto?.cap || "",
-    }));
-  }}
->
-  <option value="">Seleziona</option>
-
-  {rappresentantiLegali.map((r: any) => {
-    const soggetto = r.soggetto_cliente;
-
-    return (
-      <option key={r.id} value={r.id}>
-        {soggetto?.ragione_sociale || "Nominativo senza nome"}
-        {soggetto?.codice_fiscale ? ` - ${soggetto.codice_fiscale}` : ""}
-        {r.principale ? " — principale" : ""}
-      </option>
-    );
-  })}
-</select>
-          </div>
-
-            <button
-              type="button"
-              style={secondaryButton}
-              onClick={() => {
-                setNuovoRappLegale({
-  nome_cognome: "",
-  codice_fiscale: "",
-  amministratore_principale: false,
-  luogo_nascita: "",
-  data_nascita: "",
-  citta_residenza: "",
-  indirizzo_residenza: "",
-  provincia: "",
-  cap: "",
-});
-
-                setForm((prev) => ({
-                  ...prev,
-                  nuovo_rappresentante: true,
-                }));
-              }}
-            >
-              + Nuovo
-            </button>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "1fr 1fr",
-              gap: 12,
-              marginTop: 14,
-            }}
-          >
-            <div>
-              <label style={labelStyle}>
-                Nome amministratore
-              </label>
-
-              <input
-                style={inputStyle}
-                value={
-                  form.rappresentante_legale_nome
-                }
-                onChange={(e) =>
-                  aggiornaCampo(
-                    "rappresentante_legale_nome",
-                    e.target.value
-                  )
-                }
-              />
+          <h2 style={titleStyle}>Rappresentante legale</h2>
+          <p style={{ marginTop: 8, color: "#64748b", fontSize: 13 }}>
+            Dati recuperati dall'archivio unico Soci e Organi sociali della società.
+            La pratica non crea né modifica anagrafiche.
+          </p>
+          {caricamentoOrgani ? (
+            <p style={{ marginTop: 16 }}>Caricamento organi sociali...</p>
+          ) : rappresentantiLegali.length === 0 ? (
+            <div style={{ marginTop: 16, padding: 14, border: "1px solid #f59e0b", borderRadius: 8, background: "#fffbeb" }}>
+              <p style={{ color: "#92400e", marginBottom: 12, fontWeight: 600 }}>
+                Inserire il rappresentante legale nell'archivio Organi sociali.
+              </p>
+              <button type="button" style={secondaryButton} onClick={() =>
+                router.push(urlInserimentoOrgano(String(pratica.cliente_id), String(praticaId), "amministrazione", "rappresentante_legale"))
+              }>Inserisci organo sociale</button>
             </div>
-
-            <div>
-              <label style={labelStyle}>
-                Codice fiscale
-              </label>
-
-              <input
-                style={inputStyle}
-                value={
-                  form.rappresentante_legale_codice_fiscale
-                }
-                onChange={(e) =>
-                  aggiornaCampo(
-                    "rappresentante_legale_codice_fiscale",
-                    e.target.value.toUpperCase()
-                  )
-                }
-              />
-            </div>
-          </div>
-
-          <div
-  style={{
-    display: "grid",
-    gridTemplateColumns: "2fr 1fr 1fr 1fr",
-    gap: 12,
-    marginTop: 14,
-  }}
->
-  <div>
-    <label style={labelStyle}>Indirizzo</label>
-
-    <input
-      style={inputStyle}
-      value={form.rappresentante_legale_indirizzo}
-      onChange={(e) =>
-        aggiornaCampo(
-          "rappresentante_legale_indirizzo",
-          e.target.value
-        )
-      }
-    />
-  </div>
-
-  <div>
-    <label style={labelStyle}>Città</label>
-
-    <input
-      style={inputStyle}
-      value={form.rappresentante_legale_citta}
-      onChange={(e) =>
-        aggiornaCampo(
-          "rappresentante_legale_citta",
-          e.target.value
-        )
-      }
-    />
-  </div>
-            <div>
-  <label style={labelStyle}>Provincia</label>
-  <input
-    style={inputStyle}
-    value={form.rappresentante_legale_provincia}
-    onChange={(e) =>
-      aggiornaCampo(
-        "rappresentante_legale_provincia",
-        e.target.value.toUpperCase()
-      )
-    }
-  />
-</div>
-
-<div>
-  <label style={labelStyle}>CAP</label>
-  <input
-    style={inputStyle}
-    value={form.rappresentante_legale_cap}
-    onChange={(e) =>
-      aggiornaCampo(
-        "rappresentante_legale_cap",
-        e.target.value
-      )
-    }
-  />
-</div>
-</div>
-
-          {form.nuovo_rappresentante && (
-            <div
-              style={{
-                marginTop: 18,
-                padding: 18,
-                border:
-                  "1px solid #cbd5e1",
-                borderRadius: 10,
-                background: "#f8fafc",
-              }}
-            >
-              <h3
-                style={{
-                  marginTop: 0,
-                  marginBottom: 16,
-                }}
-              >
-                Nuovo rappresentante
-              </h3>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns:
-                    "1fr 1fr",
-                  gap: 12,
-                }}
-              >
+          ) : (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 12, alignItems: "end", marginTop: 16 }}>
                 <div>
-                  <label
-                    style={labelStyle}
-                  >
-                    Cognome e nome
-                  </label>
-
-                  <input
-                    style={inputStyle}
-                    value={
-                      nuovoRappLegale.nome_cognome
-                    }
-                    onChange={(e) =>
-                      setNuovoRappLegale(
-                        (
-                          prev
-                        ) => ({
-                          ...prev,
-                          nome_cognome:
-                            e.target
-                              .value,
-                        })
-                      )
-                    }
-                  />
+                  <label style={labelStyle}>Rappresentante legale della società</label>
+                  <select style={inputStyle} value={form.rappresentante_legale_id} onChange={(e) => {
+                    const selected = rappresentantiLegali.find((o: any) => String(o.id) === e.target.value);
+                    const soggetto = selected?.soggetto_cliente;
+                    setForm(prev => ({
+                      ...prev,
+                      rappresentante_legale_id: selected?.id || "",
+                      rappresentante_legale_nome: soggetto?.ragione_sociale || "",
+                      rappresentante_legale_codice_fiscale: soggetto?.codice_fiscale || soggetto?.partita_iva || "",
+                      rappresentante_legale_indirizzo: soggetto?.indirizzo || "",
+                      rappresentante_legale_citta: soggetto?.citta || "",
+                      rappresentante_legale_provincia: soggetto?.provincia || "",
+                      rappresentante_legale_cap: soggetto?.cap || "",
+                    }));
+                  }}>
+                    <option value="">Seleziona rappresentante</option>
+                    {rappresentantiLegali.map((o: any) => (
+                      <option key={o.id} value={o.id}>
+                        {o.soggetto_cliente?.ragione_sociale || "Nominativo senza nome"}
+                        {o.principale ? " — principale" : ""}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-
-                <div>
-                  <label
-                    style={labelStyle}
-                  >
-                    Codice fiscale
-                  </label>
-
-                  <input
-                    style={inputStyle}
-                    value={
-                      nuovoRappLegale.codice_fiscale
-                    }
-                    onChange={(e) =>
-                      setNuovoRappLegale(
-                        (
-                          prev
-                        ) => ({
-                          ...prev,
-                          codice_fiscale:
-                            e.target.value.toUpperCase(),
-                        })
-                      )
-                    }
-                  />
-                </div>
+                <button type="button" style={secondaryButton} onClick={() =>
+                  router.push(urlInserimentoOrgano(String(pratica.cliente_id), String(praticaId), "amministrazione"))
+                }>Organi sociali</button>
               </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns:
-                    "1fr 1fr",
-                  gap: 12,
-                  marginTop: 12,
-                }}
-              >
-                <div>
-                  <label
-                    style={labelStyle}
-                  >
-                    Luogo nascita
-                  </label>
-
-                  <input
-                    style={inputStyle}
-                    value={
-                      nuovoRappLegale.luogo_nascita
-                    }
-                    onChange={(e) =>
-                      setNuovoRappLegale(
-                        (
-                          prev
-                        ) => ({
-                          ...prev,
-                          luogo_nascita:
-                            e.target
-                              .value,
-                        })
-                      )
-                    }
-                  />
+              {form.rappresentante_legale_id && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 16 }}>
+                  <div><label style={labelStyle}>Nominativo (archivio)</label><input style={{ ...inputStyle, background: "#f8fafc" }} value={form.rappresentante_legale_nome} readOnly /></div>
+                  <div><label style={labelStyle}>Codice fiscale (archivio)</label><input style={{ ...inputStyle, background: "#f8fafc" }} value={form.rappresentante_legale_codice_fiscale} readOnly /></div>
+                  <div><label style={labelStyle}>Indirizzo (archivio)</label><input style={{ ...inputStyle, background: "#f8fafc" }} value={form.rappresentante_legale_indirizzo} readOnly /></div>
+                  <div><label style={labelStyle}>Città, Provincia, CAP (archivio)</label><input style={{ ...inputStyle, background: "#f8fafc" }} value={[form.rappresentante_legale_citta, form.rappresentante_legale_provincia, form.rappresentante_legale_cap].filter(Boolean).join(" ")} readOnly /></div>
                 </div>
-
-                <div>
-                  <label
-                    style={labelStyle}
-                  >
-                    Data nascita
-                  </label>
-
-                  <input
-                    type="date"
-                    style={inputStyle}
-                    value={
-                      nuovoRappLegale.data_nascita
-                    }
-                    onChange={(e) =>
-                      setNuovoRappLegale(
-                        (
-                          prev
-                        ) => ({
-                          ...prev,
-                          data_nascita:
-                            e.target
-                              .value,
-                        })
-                      )
-                    }
-                  />
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns:
-                    "2fr 1fr 1fr",
-                  gap: 12,
-                  marginTop: 12,
-                }}
-              >
-                <div>
-                  <label
-                    style={labelStyle}
-                  >
-                    Indirizzo residenza
-                  </label>
-
-                  <input
-                    style={inputStyle}
-                    value={
-                      nuovoRappLegale.indirizzo_residenza
-                    }
-                    onChange={(e) =>
-                      setNuovoRappLegale(
-                        (
-                          prev
-                        ) => ({
-                          ...prev,
-                          indirizzo_residenza:
-                            e.target
-                              .value,
-                        })
-                      )
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label
-                    style={labelStyle}
-                  >
-                    Città
-                  </label>
-
-                  <input
-                    style={inputStyle}
-                    value={
-                      nuovoRappLegale.citta_residenza
-                    }
-                    onChange={(e) =>
-                      setNuovoRappLegale(
-                        (
-                          prev
-                        ) => ({
-                          ...prev,
-                          citta_residenza:
-                            e.target
-                              .value,
-                        })
-                      )
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label
-                    style={labelStyle}
-                  >
-                    Provincia
-                  </label>
-
-                  <input
-                    style={inputStyle}
-                    value={
-                      nuovoRappLegale.provincia
-                    }
-                    onChange={(e) =>
-                      setNuovoRappLegale(
-                        (
-                          prev
-                        ) => ({
-                          ...prev,
-                          provincia:
-                            e.target
-                              .value,
-                        })
-                      )
-                    }
-                  />
-                </div>
-              </div>
-
-              <div
-                style={{
-                  marginTop: 12,
-                  maxWidth: 220,
-                }}
-              >
-                <label style={labelStyle}>
-                  CAP
-                </label>
-
-                <input
-                  style={inputStyle}
-                  value={
-                    nuovoRappLegale.cap
-                  }
-                  onChange={(e) =>
-                    setNuovoRappLegale(
-                      (prev) => ({
-                        ...prev,
-                        cap: e.target
-                          .value,
-                      })
-                    )
-                  }
-                />
-              </div>
-
-              <div style={{ marginTop: 12 }}>
-  <label
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      fontSize: 14,
-      fontWeight: 500,
-    }}
-  >
-    <input
-      type="checkbox"
-      checked={
-        nuovoRappLegale.amministratore_principale
-      }
-      onChange={(e) =>
-        setNuovoRappLegale((prev) => ({
-          ...prev,
-          amministratore_principale:
-            e.target.checked,
-        }))
-      }
-    />
-
-    Imposta come amministratore principale
-  </label>
-</div>
-
-              <div
-                style={{
-                  marginTop: 18,
-                  display: "flex",
-                  justifyContent:
-                    "flex-end",
-                }}
-              >
-                <button
-                  type="button"
-                  style={greenButton}
-                  onClick={
-                    salvaNuovoRappresentante
-                  }
-                >
-                  Salva rappresentante
-                </button>
-              </div>
-            </div>
+              )}
+            </>
           )}
         </div>
 
