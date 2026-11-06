@@ -114,6 +114,8 @@ const clienteBloccato = !!preselectedClienteId;
         const { data: operatoriData, error: operatoriError } = await supabaseAny
           .from("tbutenti")
           .select("id, nome, cognome, email")
+          .eq("studio_id", studioId)
+          .eq("attivo", true)
           .order("cognome", { ascending: true });
 
         if (operatoriError) {
@@ -216,6 +218,7 @@ const clienteBloccato = !!preselectedClienteId;
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
+          "x-aml-av7-proof": sessionStorage.getItem("antiriciclaggio_av7_access_proof") || "",
         },
         body: JSON.stringify(payload),
       });
@@ -234,6 +237,7 @@ const clienteBloccato = !!preselectedClienteId;
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
+          "x-aml-av7-proof": sessionStorage.getItem("antiriciclaggio_av7_access_proof") || "",
           },
           body: JSON.stringify({ ...payload, allow_duplicate: true }),
         });
