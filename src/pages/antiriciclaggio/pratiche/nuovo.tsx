@@ -114,6 +114,8 @@ const clienteBloccato = !!preselectedClienteId;
         const { data: operatoriData, error: operatoriError } = await supabaseAny
           .from("tbutenti")
           .select("id, nome, cognome, email")
+          .eq("studio_id", studioId)
+          .eq("attivo", true)
           .order("cognome", { ascending: true });
 
         if (operatoriError) {
