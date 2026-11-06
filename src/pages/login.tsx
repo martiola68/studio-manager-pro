@@ -29,7 +29,7 @@ export default function LoginPage() {
         if (error) console.error("[Login] getSession error:", error);
         if (data?.session?.access_token) {
           router.replace(
-            typeof window !== "undefined" && window.location.hostname.toLowerCase() === "aml.studiomanagerpro.it"
+            typeof window !== "undefined" && (process.env.NEXT_PUBLIC_AML_STANDALONE === "1" || window.location.hostname.toLowerCase() === "aml.studiomanagerpro.it")
               ? (typeof router.query.next === "string" && router.query.next.startsWith("/") && !router.query.next.startsWith("//") ? router.query.next : "/aml")
               : "/dashboard"
           );
@@ -66,7 +66,7 @@ export default function LoginPage() {
       }
       toast({ title: "Accesso effettuato", description: "Benvenuto!" });
       router.replace(
-            typeof window !== "undefined" && window.location.hostname.toLowerCase() === "aml.studiomanagerpro.it"
+            typeof window !== "undefined" && (process.env.NEXT_PUBLIC_AML_STANDALONE === "1" || window.location.hostname.toLowerCase() === "aml.studiomanagerpro.it")
               ? (typeof router.query.next === "string" && router.query.next.startsWith("/") && !router.query.next.startsWith("//") ? router.query.next : "/aml")
               : "/dashboard"
           );
