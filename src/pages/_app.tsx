@@ -67,7 +67,7 @@ const IMPOSTAZIONI_MASTER_ROUTES = new Set([
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [scadenzariCleanupPending, setScadenzariCleanupPending] = useState(false);
-  const [amlHost, setAmlHost] = useState(false);
+  const [amlHost, setAmlHost] = useState(() => typeof window !== "undefined" && window.location.hostname.toLowerCase() === "aml.studiomanagerpro.it");
   useEffect(() => {
     if (!router.isReady) return;
     const standaloneHost = window.location.hostname.toLowerCase() === "aml.studiomanagerpro.it";
