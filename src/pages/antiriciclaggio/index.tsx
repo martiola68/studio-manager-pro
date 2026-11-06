@@ -63,6 +63,7 @@ type AV1Row = {
   av4_firmato_presente?: boolean;
   regola_condotta?: boolean;
   fascicolo_confermato?: boolean;
+  ultimo_av7?: string | null;
 };
 
 type PraticaAMLRow = {
@@ -85,6 +86,7 @@ type PraticaAMLRow = {
 };
 
 const AML_SESSION_KEY = "antiriciclaggio_unlocked_societa_id";
+const AML_AV7_PROOF_KEY = "antiriciclaggio_av7_access_proof";
 const AML_SELECTED_SOCIETA_KEY = "antiriciclaggio_selected_societa_id";
 const AML_TIMEOUT_MS = 5 * 60 * 1000;
 const AML_WARNING_MS = 60 * 1000;
@@ -337,10 +339,11 @@ export default function AntiriciclaggioPage() {
       if (praticheError) throw praticheError;
       const praticheRows = (praticheData as PraticaAMLRow[]) || [];
       const rowsBase: AV1Row[] = await Promise.all(praticheRows.map(async (pratica) => {
-        const [{ data: av1 }, { data: av2 }, { data: av4 }] = await Promise.all([
-          supabaseAny.from("tbAV1").select("id, studio_id, cliente_id, societa_id, pratica_id, incaricato_adeguata_verifica_id, DataVerifica, ScadenzaVerifica, AV1Conferma, AV2Generato, AV4Generato, Prestazione").eq("pratica_id", pratica.id).maybeSingle(),
+        const [{ data: av1 }, { data: av2 }, { data: av4 }, { data: av7 }] = await Promise.all([
+          supabaseAny.from("tbAV1").select("id, studio_id, cliente_id, societa_id, pratica_id, incaricato_adeguata_verifica_id, DataVerifica, ScadenzaVerifica, AV1Conferma, AV2Generato, AV4Generato, Prestazione").eq("pratica_id", pratica.id).order("DataVerifica", { ascending: false }).order("id", { ascending: false }).limit(1).maybeSingle(),
           pratica.av2_corrente_id || pratica.av2_id ? supabaseAny.from("tbAV2").select("id, confermato").eq("id", pratica.av2_corrente_id || pratica.av2_id).maybeSingle() : supabaseAny.from("tbAV2").select("id, confermato").eq("pratica_id", pratica.id).maybeSingle(),
           supabaseAny.from("tbAV4").select("id, av1_id, Av4InviatoCL, public_sent_at, compilato_da_cliente, av4_caricato_manualmente, allegato_pdf_cliente, pdf_firmato_cliente").eq("pratica_id", pratica.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+          supabaseAny.from("tbAMLControlliCostanti").select("id, data_controllo").eq("pratica_id", pratica.id).order("data_controllo", { ascending: false }).limit(1).maybeSingle(),
         ]);
         return {
           id: av1?.id ? String(av1.id) : "",
@@ -356,6 +359,7 @@ export default function AntiriciclaggioPage() {
           AV2Confermato: !!av2?.confermato,
           AV4Generato: !!av4?.id,
           Prestazione: av1?.Prestazione || pratica.tipo_prestazione || null,
+          ultimo_av7: av7?.data_controllo || null,
           tbclienti: pratica.tbclienti || null,
           av4_info: av4 || null,
           stato_pratica: pratica.stato || "aperta",
@@ -411,7 +415,7 @@ export default function AntiriciclaggioPage() {
     setShowForgotPasswordInfo(false);
     setShowTimeoutModal(false);
     setWorkingId(null);
-    if (typeof window !== "undefined") sessionStorage.removeItem(AML_SESSION_KEY);
+    if (typeof window !== "undefined") { sessionStorage.removeItem(AML_SESSION_KEY); sessionStorage.removeItem(AML_AV7_PROOF_KEY); }
   };
 
   const handleCloseAccess = () => {
@@ -423,6 +427,7 @@ export default function AntiriciclaggioPage() {
     if (typeof window !== "undefined") {
       sessionStorage.removeItem(AML_SESSION_KEY);
       sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
+      sessionStorage.removeItem(AML_AV7_PROOF_KEY);
     }
     router.replace(router.asPath);
   };
@@ -659,13 +664,19 @@ export default function AntiriciclaggioPage() {
       if (!password.trim()) return setPasswordError("Inserisci la password.");
       setPasswordLoading(true);
       setPasswordError("");
-      const res = await fetch("/api/antiriciclaggio/verify-societa-password", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ societaId: selectedSocieta.id, password: password.trim() }) });
+      const { data: { session } } = await (getSupabaseClient() as any).auth.getSession();
+      if (!session?.access_token) return setPasswordError("Sessione scaduta, esegui nuovamente l'accesso.");
+      const res = await fetch("/api/antiriciclaggio/verify-societa-password", {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + session.access_token },
+        body: JSON.stringify({ societaId: selectedSocieta.id, password: password.trim() })
+      });
       const data = await res.json();
       if (!res.ok || !data?.ok) return setPasswordError(data?.error || "Password non corretta.");
       setUnlockedSocietaId(selectedSocieta.id);
       if (typeof window !== "undefined") {
         sessionStorage.setItem(AML_SESSION_KEY, selectedSocieta.id);
         sessionStorage.setItem(AML_SELECTED_SOCIETA_KEY, selectedSocieta.id);
+        if (data.av7AccessProof) sessionStorage.setItem(AML_AV7_PROOF_KEY, data.av7AccessProof);
       }
       setShowPasswordModal(false);
       setShowForgotPasswordInfo(false);
@@ -684,28 +695,6 @@ export default function AntiriciclaggioPage() {
     router.push(selectedSocieta?.id ? `/antiriciclaggio/pratiche/nuovo?societa_id=${selectedSocieta.id}` : "/antiriciclaggio/pratiche/nuovo");
   };
 
-  const setFascicoloCompletoManualmente = async (row: AV1Row, confermato: boolean) => {
-    if (!row.pratica_id || !canAccessAntiriciclaggio) return;
-    if (confermato && row.fascicolo_completo !== true) {
-      alert("Prima acquisisci visura e verbale previsti: i documenti mancanti impediscono la conferma.");
-      return;
-    }
-    try {
-      const {data:{session}}=await (getSupabaseClient() as any).auth.getSession();
-      if(!session?.access_token)throw new Error("Sessione scaduta");
-      const response=await fetch("/api/aml/fascicolo/conferma",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},body:JSON.stringify({praticaId:row.pratica_id,confermato})});
-      const data=await response.json();
-      if(!response.ok)throw new Error(data?.error||"Errore salvataggio");
-      setRows(prev=>prev.map(item=>item.pratica_id===row.pratica_id?{...item,fascicolo_confermato:confermato}:item));
-    }catch(e){alert(e instanceof Error?e.message:"Errore salvataggio fascicolo");}
-  };
-
-  const handleAggiungiPrestazione = (row: AV1Row) => {
-    if (!canAccessAntiriciclaggio || !row.cliente_id || !row.societa_id) return;
-    const params = new URLSearchParams({ cliente_id: row.cliente_id, societa_id: row.societa_id });
-    void router.push(`/antiriciclaggio/pratiche/nuovo?${params.toString()}`);
-  };
-
   const handleApriAV1 = (row: AV1Row) => {
     if (!canAccessAntiriciclaggio) return;
     if (row.id) return void router.push(`/antiriciclaggio/modello-av1?id=${row.id}`);
@@ -720,6 +709,16 @@ export default function AntiriciclaggioPage() {
   const handleApriAV4 = (row: AV1Row) => {
     if (!canAccessAntiriciclaggio) return;
     router.push(`/antiriciclaggio/modello-av4?pratica_id=${row.pratica_id || ""}&societa_id=${row.societa_id || ""}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`);
+  };
+
+  const handleApriAV7 = (row: AV1Row) => {
+    if (!canAccessAntiriciclaggio || !row.pratica_id) return;
+    if (selectedSocieta?.antiriciclaggio_enabled && !sessionStorage.getItem(AML_AV7_PROOF_KEY)) {
+      setPasswordError("Per accedere ad AV7 verifica nuovamente la password del soggetto responsabile.");
+      setShowPasswordModal(true);
+      return;
+    }
+    void router.push(`/antiriciclaggio/controllo-costante?pratica_id=${encodeURIComponent(row.pratica_id)}`);
   };
 
   const handleApriDocumenti = (row: AV1Row) => {
@@ -848,7 +847,7 @@ export default function AntiriciclaggioPage() {
       {loading ? <div>Caricamento...</div> : !societaFilter ? <div>Seleziona un soggetto responsabile per visualizzare le pratiche</div> : !canAccessAntiriciclaggio ? <div>Accesso riservato: inserisci la password della società per consultare le pratiche.</div> : (
         <div className="overflow-x-auto rounded-lg border bg-white">
           <table className="w-full text-sm">
-            <thead className="bg-gray-100"><tr><th className="p-3 text-left">Stato</th><th className="p-3 text-left">Cliente</th><th className="p-3 text-left">Utente di riferimento</th><th className="p-3 text-left">Data verifica</th><th className="p-3 text-left">Scadenza verifica</th><th className="p-2 text-center">AV1<br/>conferma</th><th className="p-2 text-center">AV2<br/>confermato</th><th className="p-2 text-center">AV4<br/>inviato</th><th className="p-2 text-center">AV4<br/>manuale</th><th className="p-2 text-center">AV4<br/>confermato</th><th className="p-3 text-center">Fascicolo<br/>completo</th><th className="p-3 text-center">Azioni</th></tr></thead>
+            <thead className="bg-gray-100"><tr><th className="p-3 text-left">Stato</th><th className="p-3 text-left">Cliente</th><th className="p-3 text-left">Utente di riferimento</th><th className="p-3 text-left">Data verifica</th><th className="p-3 text-left">Scadenza verifica</th><th className="p-2 text-center">AV1<br/>conferma</th><th className="p-2 text-center">AV2<br/>confermato</th><th className="p-2 text-center">AV4<br/>inviato</th><th className="p-2 text-center">AV4<br/>manuale</th><th className="p-2 text-center">AV4<br/>confermato</th><th className="p-3 text-center">Ultimo AV7</th><th className="p-3 text-center">Azioni</th></tr></thead>
             <tbody>
               {filteredRows.length === 0 ? <tr><td colSpan={12} className="p-4 text-center">{ricercaCliente ? "Nessun cliente corrisponde alla ricerca" : "Nessuna pratica trovata per il soggetto responsabile selezionato"}</td></tr> : gruppiPratiche.map(({ row, pratiche, key }) => {
                 const cliente = getCliente(row);
@@ -883,10 +882,11 @@ export default function AntiriciclaggioPage() {
                   <td className="p-2 text-center">{row.regola_condotta ? "Esente" : av4Info?.Av4InviatoCL || av4Info?.public_sent_at ? "Sì" : "No"}</td>
                   <td className="p-2 text-center">{av4Info?.av4_caricato_manualmente ? "Sì" : "-"}</td>
                   <td className="p-2 text-center">{row.av4_firmato_presente ? "Sì" : "No"}</td>
-                  <td className="p-3 text-center"><input aria-label="Fascicolo completo" title={row.fascicolo_completo ? "Conferma manuale fascicolo" : "Carica prima i documenti richiesti"} type="checkbox" checked={!!row.fascicolo_confermato} disabled={!row.fascicolo_completo && !row.fascicolo_confermato} onChange={e=>void setFascicoloCompletoManualmente(row,e.target.checked)} className="h-4 w-4 accent-green-600"/></td><td className="p-3"><div className="flex items-center justify-center gap-3">
+                  <td className="p-3 text-center">{formatDate(row.ultimo_av7)}</td><td className="p-3"><div className="flex items-center justify-center gap-3">
                     <button onClick={() => handleApriAV1(row)} className={`rounded-[28px] bg-white p-1 ${getIconBorderClass(!!row.AV1Conferma)}`}>AV1</button>
                     <button disabled={!!row.regola_condotta} title={row.regola_condotta?"Esente: regola di condotta":"Apri AV2"} onClick={() => handleApriAV2(row)} className={`rounded-[28px] bg-white p-1 ${getIconBorderClass(!!row.regola_condotta || !!row.AV2Confermato)}`}>AV2</button>
                     <button disabled={!!row.regola_condotta} title={row.regola_condotta?"Esente: regola di condotta":"Apri AV4"} onClick={() => handleApriAV4(row)} className={`rounded-[28px] bg-white p-1 ${getAV4IconBorderClass(row)}`}>AV4</button>
+                    <button onClick={() => handleApriAV7(row)} className="rounded border border-sky-500 bg-white px-2 py-1 text-xs font-bold text-sky-700" title="AV7 · controllo costante e storico">AV7</button>
                     <button onClick={() => handleApriDocumenti(row)} className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-blue-500 bg-white"><FolderOpen className="h-4 w-4 text-blue-600"/></button>
                     <button onClick={() => handleEliminaCompleto(row)} className="flex h-8 w-8 items-center justify-center rounded-full bg-white"><Trash2 className="h-4 w-4 text-red-500"/></button>
                   </div></td>
