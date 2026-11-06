@@ -761,7 +761,7 @@ export default function AntiriciclaggioPage() {
                 return <tr key={row.pratica_id || row.id} className={`border-t ${getRowClassName(row)}`}>
                   <td className={`p-3 ${statoInfo.className}`}><div className="flex items-center gap-3"><span className={`inline-block h-5 w-5 rounded-full ${statoInfo.dotClass} shadow`}/><span>{statoInfo.text}</span></div></td>
                   <td className="p-3">
-                    <div className="font-medium">{nomeCliente}</div>
+                    <div className="text-[15px] font-semibold leading-snug text-slate-900">{nomeCliente}</div>
                     <div className="mt-1 text-xs text-slate-600">Prestazione selezionata: <span className="font-semibold text-slate-800">{row.Prestazione || "Da definire"}</span></div>
                     <button type="button" onClick={() => handleAggiungiPrestazione(row)}
                       className="mt-2 rounded-md border border-sky-500 bg-white px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-50"
