@@ -5,6 +5,8 @@ on:
     paths:
       - 'src/pages/antiriciclaggio/**'
       - 'src/pages/api/antiriciclaggio/**'
+      - 'src/pages/pratiche/**'
+      - 'src/pages/api/pratiche/variazioni/**'
       - 'supabase/migrations/20261105*'
       - '.github/workflows/aml-av7-pr-build.yml'
   workflow_dispatch:
