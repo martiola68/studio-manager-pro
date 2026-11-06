@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { verifyAV7AccessProof } from "@/lib/aml/av7AccessProof";
 
 function getBearerToken(req: NextApiRequest): string | null {
   const authHeader = req.headers.authorization || "";
