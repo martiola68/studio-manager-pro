@@ -4,6 +4,13 @@ on:
   pull_request:
     paths:
       - 'src/pages/antiriciclaggio/**'
+      - 'src/pages/aml/**'
+      - 'src/components/aml/**'
+      - 'src/pages/_app.tsx'
+      - 'src/pages/login.tsx'
+      - 'src/components/security/ModuleAccessGuard.tsx'
+      - 'src/contexts/StudioContext.tsx'
+      - 'middleware.ts'
       - 'src/pages/api/antiriciclaggio/**'
       - 'src/pages/pratiche/**'
       - 'src/components/pratiche/forms/**'
