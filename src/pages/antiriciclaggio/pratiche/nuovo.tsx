@@ -114,6 +114,8 @@ const clienteBloccato = !!preselectedClienteId;
         const { data: operatoriData, error: operatoriError } = await supabaseAny
           .from("tbutenti")
           .select("id, nome, cognome, email")
+          .eq("studio_id", studioId)
+          .eq("attivo", true)
           .order("cognome", { ascending: true });
 
         if (operatoriError) {
@@ -134,6 +136,9 @@ const clienteBloccato = !!preselectedClienteId;
 
         if (requestedClienteId && !(clientiData || []).some((c: any) => c.id === requestedClienteId)) {
           throw new Error("Il cliente selezionato non appartiene allo studio.");
+        }
+        if (preselectedSocietaId && !(societaData || []).some((c: any) => c.id === preselectedSocietaId)) {
+          throw new Error("Il soggetto responsabile non appartiene allo studio.");
         }
         setClienti((clientiData || []) as ClienteOption[]);
         setSocietaOptions((societaData || []) as SocietaOption[]);
@@ -187,6 +192,10 @@ const clienteBloccato = !!preselectedClienteId;
 
       if (!tipoPrestazione) {
         alert("Seleziona il tipo di prestazione.");
+        return;
+      }
+      if (!societaId) {
+        alert("Seleziona il soggetto responsabile AML. Senza questo collegamento la pratica non comparirebbe nell'elenco.");
         return;
       }
 
@@ -326,7 +335,7 @@ const clienteBloccato = !!preselectedClienteId;
 
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">
-                Soggetto responsabile / tenant AML
+                Soggetto responsabile / tenant AML *
               </label>
              <select
   value={societaId}
