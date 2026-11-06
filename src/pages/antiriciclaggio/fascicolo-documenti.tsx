@@ -1037,22 +1037,46 @@ useEffect(() => {
             <div>
               <h3 className="mb-2 text-sm font-bold">Versioni AV1 ({versioniAV1.length})</h3>
               {versioniAV1.map((v, i) => (
-                <div key={v.id} className="flex items-center justify-between gap-2 border-b py-2 text-sm">
-                  <span>AV1 del {v.DataVerifica ? new Date(v.DataVerifica + "T12:00:00").toLocaleDateString("it-IT") : "—"} · {v.AV1Conferma ? "Confermato" : "Da confermare"}</span>
-                  <a className="rounded border border-sky-400 px-2 py-1 text-sky-700"
-                    href={`/antiriciclaggio/modello-av1?id=${v.id}&pratica_id=${encodeURIComponent(pratica_id)}`}
-                    target="_blank" rel="noopener noreferrer">Apri</a>
+                <div key={v.id} className="flex items-center justify-between gap-3 border-b py-2 text-sm">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-800">AV1 · Versione {versioniAV1.length - i} · ID {v.id}</div>
+                    <div className="text-xs text-slate-600">
+                      Verifica: {v.DataVerifica ? new Date(v.DataVerifica + "T12:00:00").toLocaleDateString("it-IT") : "—"}
+                      {" · "}{v.AV1Conferma ? "Confermato" : "Da confermare"}
+                    </div>
+                  </div>
+                  <button type="button" className="shrink-0 rounded border border-sky-400 px-3 py-1 text-sky-700"
+                    onClick={() => {
+                      const params = new URLSearchParams({
+                        id: String(v.id), pratica_id, origine: "fascicolo",
+                      });
+                      if (typeof cliente_id === "string" && cliente_id) params.set("cliente_id", cliente_id);
+                      void router.push(`/antiriciclaggio/modello-av1?${params.toString()}`);
+                    }}>Apri AV1</button>
                 </div>
               ))}
             </div>
             <div>
               <h3 className="mb-2 text-sm font-bold">Versioni AV4 ({versioniAV4.length})</h3>
-              {versioniAV4.map((v) => (
-                <div key={v.id} className="flex items-center justify-between gap-2 border-b py-2 text-sm">
-                  <span>AV4 del {v.created_at ? new Date(v.created_at).toLocaleDateString("it-IT") : "—"} · {v.compilato_da_cliente ? "Compilato" : "Da completare"}</span>
-                  <a className="rounded border border-sky-400 px-2 py-1 text-sky-700"
-                    href={`/antiriciclaggio/modello-av4?id=${v.id}&pratica_id=${encodeURIComponent(pratica_id)}`}
-                    target="_blank" rel="noopener noreferrer">Apri</a>
+              {versioniAV4.map((v, i) => (
+                <div key={v.id} className="flex items-center justify-between gap-3 border-b py-2 text-sm">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-800" title={`AV4 · ID completo: ${v.id}`}>
+                      AV4 · Versione {versioniAV4.length - i} · ID {v.id.slice(0, 8)}
+                    </div>
+                    <div className="text-xs text-slate-600">
+                      Creato: {v.created_at ? new Date(v.created_at).toLocaleDateString("it-IT") : "—"}
+                      {" · "}{v.compilato_da_cliente ? "Compilato" : "Da completare"}
+                    </div>
+                  </div>
+                  <button type="button" className="shrink-0 rounded border border-sky-400 px-3 py-1 text-sky-700"
+                    onClick={() => {
+                      const params = new URLSearchParams({
+                        id: String(v.id), pratica_id, origine: "fascicolo",
+                      });
+                      if (typeof cliente_id === "string" && cliente_id) params.set("cliente_id", cliente_id);
+                      void router.push(`/antiriciclaggio/modello-av4?${params.toString()}`);
+                    }}>Apri AV4</button>
                 </div>
               ))}
             </div>
