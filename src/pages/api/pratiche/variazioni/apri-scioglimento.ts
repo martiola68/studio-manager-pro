@@ -117,6 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       if (insertError) throw insertError;
     }
 
+    if (!praticaId) throw new Error("Identificativo della determina non disponibile");
     await aggiornaStatiVariazione(supabase, v.id);
     return res.status(200).json({ success: true, pratica_id: praticaId });
   } catch (error: any) {
