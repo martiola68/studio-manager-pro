@@ -9,7 +9,7 @@ const MODULI: Array<{ modulo: ModuloLicenza; label: string; prefixes: string[] }
   {
     modulo: "aml",
     label: "Antiriciclaggio (AML)",
-    prefixes: ["/antiriciclaggio", "/impostazioni/elenco-prestazioni-ar"],
+    prefixes: ["/aml", "/antiriciclaggio", "/impostazioni/elenco-prestazioni-ar"],
   },
   {
     modulo: "revisione",
@@ -32,8 +32,20 @@ function moduloPerPath(path: string) {
 
 export function ModuleAccessGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const { studioId, isLoading, piano, hasModule } = useStudio();
+  const { studioId, isLoading, piano, amlOnly, hasModule } = useStudio();
   const protectedModule = moduloPerPath(router.asPath || router.pathname || "");
+
+  // AML standalone non può accedere ai moduli generali, nemmeno tramite URL diretto.
+  const currentPath = (router.asPath || router.pathname || "").split("?")[0].split("#")[0];
+  const permitted = ["/aml", "/antiriciclaggio", "/impostazioni/studio", "/microsoft365",
+    "/impostazioni/elenco-prestazioni-ar"];
+  const isAmlHost = typeof window !== "undefined" &&
+    window.location.hostname.toLowerCase() === "aml.studiomanagerpro.it";
+  if ((isAmlHost || amlOnly) && !permitted.some(prefix =>
+    currentPath === prefix || currentPath.startsWith(prefix + "/")
+  )) return <div className="mx-auto mt-8 max-w-xl rounded-lg border bg-white p-6">
+    Funzione non disponibile nell'interfaccia AML.
+  </div>;
 
   if (!protectedModule) return <>{children}</>;
 
