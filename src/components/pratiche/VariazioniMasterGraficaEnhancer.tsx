@@ -169,7 +169,7 @@ export function VariazioniMasterGraficaEnhancer() {
         max-width: none !important;
         height: 100% !important;
         min-height: 0 !important;
-        padding: 12px !important;
+        padding: 4px !important;
         display: flex !important;
         flex-direction: column !important;
         overflow: hidden !important;
@@ -252,11 +252,26 @@ export function VariazioniMasterGraficaEnhancer() {
 
       .variazioni-master-page table {
         width: 100% !important;
+        min-width: 1580px !important;
+        table-layout: fixed !important;
         border-collapse: separate !important;
         border-spacing: 0 !important;
         background: white !important;
         font-size: .75rem !important;
       }
+
+      /* Distribuzione stabile della larghezza: Iter e Azioni non si schiacciano. */
+      .variazioni-master-page table th:nth-child(1) { width: 12% !important; }
+      .variazioni-master-page table th:nth-child(2) { width: 12% !important; }
+      .variazioni-master-page table th:nth-child(3) { width: 7% !important; }
+      .variazioni-master-page table th:nth-child(4) { width: 8% !important; }
+      .variazioni-master-page table th:nth-child(5) { width: 8% !important; }
+      .variazioni-master-page table th:nth-child(6) { width: 7% !important; }
+      .variazioni-master-page table th:nth-child(7) { width: 7% !important; }
+      .variazioni-master-page table th:nth-child(8) { width: 20% !important; }
+      .variazioni-master-page table th:nth-child(9) { width: 8% !important; }
+      .variazioni-master-page table th:nth-child(10) { width: 5% !important; }
+      .variazioni-master-page table th:nth-child(11) { width: 6% !important; }
 
       .variazioni-master-page thead {
         position: sticky !important;
@@ -294,11 +309,53 @@ export function VariazioniMasterGraficaEnhancer() {
         color: rgb(3 105 161) !important;
       }
 
-      .variazioni-master-page tbody td button {
+      /* I collegamenti testuali dell'Iter non sono icone quadrate. */
+      .variazioni-master-page tbody td:nth-child(8) button {
+        display: block !important;
+        width: auto !important;
+        height: auto !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        white-space: nowrap !important;
+        line-height: 1.6 !important;
+        text-align: left !important;
+        border: 0 !important;
+        background: transparent !important;
+        border-radius: 0 !important;
+      }
+
+      /* Solo Modifica ed Elimina, ultima colonna, hanno dimensione icona. */
+      .variazioni-master-page tbody td:last-child > div {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        gap: 8px !important;
+        white-space: nowrap !important;
+      }
+      .variazioni-master-page tbody td:last-child button {
+        display: inline-flex !important;
+        flex: 0 0 30px !important;
+        align-items: center !important;
+        justify-content: center !important;
         width: 30px !important;
         height: 30px !important;
+        min-width: 30px !important;
+        min-height: 30px !important;
         padding: 0 !important;
+        border: 1px solid rgb(125 211 252) !important;
         border-radius: 6px !important;
+        background: white !important;
+        color: rgb(3 105 161) !important;
+      }
+      .variazioni-master-page tbody td:last-child button:last-child {
+        border-color: rgb(254 202 202) !important;
+        background: white !important;
+        color: rgb(220 38 38) !important;
+      }
+      .variazioni-master-page tbody td:last-child button:last-child:hover {
+        border-color: rgb(239 68 68) !important;
+        background: rgb(254 242 242) !important;
       }
 
       .variazioni-master-page .bg-green-500,
