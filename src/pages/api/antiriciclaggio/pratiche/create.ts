@@ -106,6 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .select("id")
         .eq("id", operatore_responsabile_id)
         .eq("studio_id", studioId)
+        .eq("attivo", true)
         .maybeSingle();
 
       if (operatoreError || !operatore?.id) {
