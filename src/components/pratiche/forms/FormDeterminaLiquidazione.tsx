@@ -721,7 +721,7 @@ async function caricaAmministratori() {
                   </select>
                 </div>
                 <button type="button" style={secondaryButton} onClick={() =>
-                  router.push(urlInserimentoOrgano(String(pratica.cliente_id), String(praticaId), "amministrazione"))
+                  router.push(`/clienti/organi-sociali?cliente_id=${encodeURIComponent(String(pratica.cliente_id))}&ritorno_pratica=${encodeURIComponent(String(praticaId))}`)
                 }>Organi sociali</button>
               </div>
               {form.rappresentante_legale_id && (
