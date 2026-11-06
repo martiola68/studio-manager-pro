@@ -73,16 +73,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({ ok: false, error: "Cliente non appartenente allo studio" });
     }
 
-    if (societa_id) {
-      const { data: societa, error: societaError } = await supabaseAdmin
-        .from("tbRespAVSocieta")
-        .select("id")
-        .eq("id", societa_id)
-        .eq("studio_id", studioId)
-        .maybeSingle();
+    if (!societa_id) {
+      return res.status(400).json({ ok: false, error: "Seleziona il soggetto responsabile AML" });
+    }
 
-      if (societaError || !societa?.id) {
-        return res.status(403).json({ ok: false, error: "Soggetto responsabile non appartenente allo studio" });
+    const { data: societa, error: societaError } = await supabaseAdmin
+      .from("tbRespAVSocieta")
+      .select("id, antiriciclaggio_enabled")
+      .eq("id", societa_id)
+      .eq("studio_id", studioId)
+      .maybeSingle();
+
+    if (societaError || !societa?.id) {
+      return res.status(403).json({ ok: false, error: "Soggetto responsabile non appartenente allo studio" });
+    }
+
+    if (societa.antiriciclaggio_enabled) {
+      const proof = String(req.headers["x-aml-av7-proof"] || "");
+      if (!verifyAV7AccessProof(proof, {
+        uid: authUser.id, studio: studioId, societa: societa_id,
+      })) {
+        return res.status(403).json({
+          ok: false,
+          error: "Sessione AML scaduta. Riapri l'elenco Antiriciclaggio e sblocca il soggetto prima di aggiungere la prestazione.",
+        });
       }
     }
 
