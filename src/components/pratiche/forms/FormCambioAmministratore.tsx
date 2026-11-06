@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
+import { urlInserimentoOrgano } from "@/lib/pratiche/organiSocialiLink";
 import { Download, Trash2, Upload } from "lucide-react";
 
 const font =
@@ -833,6 +834,12 @@ alert("Documento generato.");
   </option>
 ))}
               </select>
+              <button type="button"
+                style={{ ...secondaryButton, marginTop: 8 }}
+                onClick={() => router.push(urlInserimentoOrgano(String(pratica.cliente_id), String(praticaId), "amministrazione", "amministratore"))}>
+                Inserisci organo sociale
+              </button>
+
             </div>
 
             <div>
@@ -878,7 +885,7 @@ alert("Documento generato.");
               style={blueButton}
               onClick={aggiungiNuovoAmministratore}
             >
-              Aggiungi nuovo
+              Aggiungi alla pratica
             </button>
           </div>
 

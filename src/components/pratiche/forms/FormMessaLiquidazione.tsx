@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import { urlInserimentoOrgano } from "@/lib/pratiche/organiSocialiLink";
 import {
   Download,
   Trash2,
@@ -124,17 +125,6 @@ const [nuovoSocio, setNuovoSocio] = useState({
 
 const [organiSocieta, setOrganiSocieta] = useState<any[]>([]);
 
-const [mostraNuovoLiquidatore, setMostraNuovoLiquidatore] = useState(false);
-
-const [nuovoLiquidatore, setNuovoLiquidatore] = useState({
-  nome_cognome: "",
-  codice_fiscale: "",
-  indirizzo: "",
-  cap: "",
-  citta: "",
-  provincia: "",
-});
-  
   const [saving, setSaving] = useState(false);
   const [messaggio, setMessaggio] = useState("");
 
@@ -235,7 +225,7 @@ useEffect(() => {
     caricaOrganiSocieta();
     caricaProfessionisti();
     caricaDiciture();
-    caricaLiquidatoriDisponibili();
+    // I liquidatori si leggono dagli Organi sociali.
   }
 }, [praticaId]);
 
@@ -287,35 +277,6 @@ async function caricaDiciture() {
   }
 }
 
- async function caricaLiquidatoriDisponibili() {
-  const supabase = getSupabaseClient() as any;
-
-  const { data, error } = await supabase
-    .from("tbclienti")
-    .select(`
-      id,
-      ragione_sociale,
-      codice_fiscale,
-      partita_iva,
-      indirizzo,
-      citta,
-      provincia,
-      cap,
-      tipo_cliente,
-      cliente
-    `)
-    .eq("tipo_cliente", "Persona fisica")
-    .order("ragione_sociale", { ascending: true });
-
-  if (error) {
-    console.error("Errore caricaLiquidatoriDisponibili:", error);
-    setLiquidatoriDisponibili([]);
-    return;
-  }
-
-  setLiquidatoriDisponibili(data || []);
-}
-
 async function caricaOrganiSocieta() {
   if (!pratica?.cliente_id) return;
 
@@ -339,11 +300,12 @@ setOrganiSocieta(
 setRappresentantiLegali(
   organiAttivi.filter((o: any) => o.tipo_ruolo === "R")
 );
+setLiquidatoriDisponibili(
+  organiAttivi.filter((o: any) => o.ruolo === "liquidatore" && o.soggetto_cliente_id && o.soggetto_cliente)
+    .map((o: any) => ({ ...o.soggetto_cliente, id: o.soggetto_cliente_id }))
+);
   }
   
-function normalizzaCF(cf: string) {
-  return String(cf || "").trim().toUpperCase();
-}
 
   
 function aggiornaCampo(campo: string, valore: string) {
@@ -706,21 +668,9 @@ provincia: selected?.soggetto_cliente?.provincia || "",
           return;
         }
 
-await fetch("/api/clienti-organi", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    cliente_id: pratica.cliente_id,
-    soggetto_cliente_id: nuovoSocio.nominativo_id,
-    tipo_ruolo: "S",
-    ruolo: "socio",
-    carica: "Socio",
-    percentuale_partecipazione:
-      nuovoSocio.percentuale_partecipazione || null,
-    presenza: nuovoSocio.presenza || "Presente",
-    attivo: true,
-  }),
-});
+// Il socio esiste già nell'archivio centrale Organi sociali.
+        // Non inserire una seconda relazione tbclienti_organi dal documento.
+
 
         setNuovoSocio({
           nominativo_id: "",
@@ -869,221 +819,16 @@ await fetch("/api/clienti-organi", {
 </select>
     </div>
 
- <button
-  type="button"
-  style={secondaryButton}
-  onClick={() => {
-    setNuovoLiquidatore({
-      nome_cognome: "",
-      codice_fiscale: "",
-      indirizzo: "",
-      cap: "",
-      citta: "",
-      provincia: "",
-    });
-
-    setMostraNuovoLiquidatore(true);
-  }}
->
-  + Nuovo
-</button>
+ <button type="button" style={secondaryButton}
+   onClick={() => router.push(urlInserimentoOrgano(String(pratica.cliente_id), String(praticaId), "amministrazione", "liquidatore"))}>
+   Inserisci
+ </button>
     
   </div>
 
-        {mostraNuovoLiquidatore && (
-  <div
-    style={{
-      ...cardStyle,
-      marginTop: 18,
-      background: "#f8fafc",
-    }}
-  >
-    <h3 style={{ margin: 0, fontSize: 16 }}>
-      Aggiungi nuovo liquidatore
-    </h3>
-
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr 1fr",
-        gap: 12,
-        marginTop: 14,
-      }}
-    >
-      <div>
-        <label style={labelStyle}>Nome e cognome</label>
-        <input
-          style={inputStyle}
-          value={nuovoLiquidatore.nome_cognome}
-          onChange={(e) =>
-            setNuovoLiquidatore({
-              ...nuovoLiquidatore,
-              nome_cognome: e.target.value,
-            })
-          }
-        />
-      </div>
-
-      <div>
-        <label style={labelStyle}>Codice fiscale</label>
-        <input
-          style={inputStyle}
-          value={nuovoLiquidatore.codice_fiscale}
-          onChange={(e) =>
-            setNuovoLiquidatore({
-              ...nuovoLiquidatore,
-              codice_fiscale: e.target.value.toUpperCase(),
-            })
-          }
-        />
-      </div>
-
-      <div>
-        <label style={labelStyle}>Indirizzo</label>
-        <input
-          style={inputStyle}
-          value={nuovoLiquidatore.indirizzo}
-          onChange={(e) =>
-            setNuovoLiquidatore({
-              ...nuovoLiquidatore,
-              indirizzo: e.target.value,
-            })
-          }
-        />
-      </div>
-
-      <div>
-        <label style={labelStyle}>CAP</label>
-        <input
-          style={inputStyle}
-          value={nuovoLiquidatore.cap}
-          onChange={(e) =>
-            setNuovoLiquidatore({
-              ...nuovoLiquidatore,
-              cap: e.target.value,
-            })
-          }
-        />
-      </div>
-
-      <div>
-        <label style={labelStyle}>Città</label>
-        <input
-          style={inputStyle}
-          value={nuovoLiquidatore.citta}
-          onChange={(e) =>
-            setNuovoLiquidatore({
-              ...nuovoLiquidatore,
-              citta: e.target.value,
-            })
-          }
-        />
-      </div>
-
-      <div>
-        <label style={labelStyle}>Provincia</label>
-        <input
-          style={inputStyle}
-          value={nuovoLiquidatore.provincia}
-          onChange={(e) =>
-            setNuovoLiquidatore({
-              ...nuovoLiquidatore,
-              provincia: e.target.value.toUpperCase(),
-            })
-          }
-        />
-      </div>
-    </div>
-
-    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
-      <button
-        type="button"
-        style={blueButton}
-        onClick={async () => {
-          const cf = normalizzaCF(nuovoLiquidatore.codice_fiscale);
-
-          if (!nuovoLiquidatore.nome_cognome.trim()) {
-            alert("Nome liquidatore obbligatorio.");
-            return;
-          }
-
-          if (!cf) {
-            alert("Codice fiscale obbligatorio.");
-            return;
-          }
-
-
-const payload = {
-  nome_cognome: nuovoLiquidatore.nome_cognome?.trim(),
-  codice_fiscale: cf,
-  indirizzo: nuovoLiquidatore.indirizzo?.trim(),
-  cap: nuovoLiquidatore.cap?.trim(),
-  citta: nuovoLiquidatore.citta?.trim(),
-  provincia: nuovoLiquidatore.provincia?.trim(),
-};
-
-console.log("PAYLOAD NUOVO LIQUIDATORE", payload);
-
-const res = await fetch(
-  `/api/rapp-legali/${encodeURIComponent(String(praticaId))}/nuovo-rapp-pratiche`,
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  }
-);
-
-          const data = await res.json();
-
-          if (!res.ok) {
-            alert(data.error || "Errore creazione liquidatore");
-            return;
-          }
-
-        const nuovo = data.data;
-
-          setRappresentantiLegali((prev) => [nuovo, ...prev]);
-
-          setForm((prev) => ({
-            ...prev,
-            liquidatore_id: nuovo.id,
-            liquidatore_nome: nuovo.nome_cognome || "",
-            liquidatore_codice_fiscale: nuovo.codice_fiscale || "",
-            liquidatore_indirizzo:
-              nuovo.indirizzo_residenza || nuovo.indirizzo || "",
-            liquidatore_citta:
-              nuovo.citta_residenza || nuovo.citta || "",
-            liquidatore_provincia: nuovo.provincia || "",
-            liquidatore_cap: nuovo.cap || nuovo.CAP || "",
-            liquidatore_residenza: [
-              nuovo.indirizzo_residenza || nuovo.indirizzo,
-              nuovo.cap || nuovo.CAP,
-              nuovo.citta_residenza || nuovo.citta,
-              nuovo.provincia,
-            ]
-              .filter(Boolean)
-              .join(" "),
-          }));
-
-          setNuovoLiquidatore({
-            nome_cognome: "",
-            codice_fiscale: "",
-            indirizzo: "",
-            cap: "",
-            citta: "",
-            provincia: "",
-          });
-
-          setMostraNuovoLiquidatore(false);
-        }}
-      >
-        Aggiungi liquidatore
-      </button>
-    </div>
-  </div>
-)}
+        {liquidatoriDisponibili.length === 0 && (
+          <p style={{ marginTop: 12, color: "#92400e" }}>Inserire il liquidatore nell'archivio Organi sociali della società.</p>
+        )}
 
   <div
     style={{

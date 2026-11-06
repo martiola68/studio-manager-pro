@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { isCompanyClient } from "@/lib/isCompanyClient";
 import {
   normalizeCF,
@@ -371,6 +371,8 @@ const [erroreDiritti, setErroreDiritti] = useState("");
   const [loading, setLoading] = useState(false);
 const [messaggio, setMessaggio] = useState("");
 const [modalSezione, setModalSezione] = useState<"soci" | "amministrazione" | "controllo" | null>(null);
+const modalPraticaAperta = useRef("");
+const ritornoPratica = typeof router.query.ritorno_pratica === "string" ? router.query.ritorno_pratica : "";
 const [ricercaNominativo, setRicercaNominativo] = useState("");
 
 const [showNuovoNominativo, setShowNuovoNominativo] = useState(false);
@@ -455,6 +457,20 @@ useEffect(() => {
 
   void caricaOrgani();
 }, [clienteId]);
+
+// Una pratica apre la modale CANONICA della società selezionata, mai
+// una seconda anagrafica locale alla pratica.
+useEffect(() => {
+  if (!router.isReady || !clienteId || !router.query.apri_modal) return;
+  const expected = typeof router.query.cliente_id === "string" ? router.query.cliente_id : "";
+  if (!expected || expected !== clienteId) return;
+  const sezione = router.query.apri_modal;
+  if (sezione !== "soci" && sezione !== "amministrazione" && sezione !== "controllo") return;
+  const key = [clienteId, sezione, String(router.query.ritorno_pratica || "")].join(":");
+  if (modalPraticaAperta.current === key) return;
+  modalPraticaAperta.current = key;
+  void apriInserimentoSezione(sezione, typeof router.query.ruolo === "string" ? router.query.ruolo : undefined);
+}, [router.isReady, clienteId, router.query.cliente_id, router.query.apri_modal, router.query.ruolo, router.query.ritorno_pratica]);
 
 
   const organiFiltrati = useMemo(() => {
@@ -1752,6 +1768,11 @@ setErroreDiritti("");
 
 await caricaOrgani();
 
+// Ritorno alla pratica solo DOPO il salvataggio nell'archivio centrale.
+if (ritornoPratica && modalSezione === "amministrazione") {
+  await router.push(`/pratiche/${encodeURIComponent(ritornoPratica)}?organo_aggiornato=1`);
+}
+
     }
 
  async function disattivaOrgano(organo: any) {
@@ -2040,7 +2061,10 @@ const sociVisualizzati = organi.filter((o) => o.ruolo === "socio");
 const amministrazioneVisualizzata = organi.filter((o) => ruoliAmministrazione.includes(String(o.ruolo || "")));
 const controlloVisualizzato = organi.filter((o) => ruoliControllo.includes(String(o.ruolo || "")));
 
-async function apriInserimentoSezione(sezione: "soci" | "amministrazione" | "controllo") {
+async function apriInserimentoSezione(
+  sezione: "soci" | "amministrazione" | "controllo",
+  ruoloPreselezionato?: string
+) {
   if (nominativi.length === 0) {
     await caricaNominativi();
   }
@@ -2050,7 +2074,9 @@ async function apriInserimentoSezione(sezione: "soci" | "amministrazione" | "con
   setRicercaNominativo("");
   setForm({
     soggetto_cliente_id: "",
-    ruolo: sezione === "soci" ? "socio" : sezione === "controllo" ? "sindaco_effettivo" : "amministratore",
+    ruolo: sezione === "soci" ? "socio"
+      : sezione === "controllo" ? (ruoliControllo.includes(ruoloPreselezionato || "") ? ruoloPreselezionato! : "sindaco_effettivo")
+      : (ruoliAmministrazione.includes(ruoloPreselezionato || "") ? ruoloPreselezionato! : "amministratore"),
     carica: "", percentuale_partecipazione: "", importo_quota_nominale: "", titolo_possesso: "piena_proprieta",
     percentuale_diritti_voto: "", percentuale_diritti_utili: "", note_titolo_possesso: "",
     partecipazione_collegata_id: "", presenza: "Presente", principale: false, attivo: true,
@@ -2090,10 +2116,10 @@ return (
 
         <button
           type="button"
-          onClick={() => router.push("/clienti")}
+          onClick={() => router.push(ritornoPratica ? `/pratiche/${encodeURIComponent(ritornoPratica)}` : "/clienti")}
           style={secondaryButton}
         >
-          ← Torna clienti
+          {ritornoPratica ? "← Torna alla pratica" : "← Torna clienti"}
         </button>
       </div>
 
