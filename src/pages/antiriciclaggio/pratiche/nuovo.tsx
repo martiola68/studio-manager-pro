@@ -218,6 +218,7 @@ const clienteBloccato = !!preselectedClienteId;
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
+          "x-aml-av7-proof": sessionStorage.getItem("antiriciclaggio_av7_access_proof") || "",
         },
         body: JSON.stringify(payload),
       });
@@ -236,6 +237,7 @@ const clienteBloccato = !!preselectedClienteId;
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
+          "x-aml-av7-proof": sessionStorage.getItem("antiriciclaggio_av7_access_proof") || "",
           },
           body: JSON.stringify({ ...payload, allow_duplicate: true }),
         });
