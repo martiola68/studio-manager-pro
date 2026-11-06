@@ -6,7 +6,12 @@ export function middleware(request: NextRequest) {
 
   // Frontend autonomo AML: stesso backend, navigazione solo AML.
   // Il vincolo di dominio non dipende da sessionStorage e non tocca SMP.
-  const isAmlHost = request.nextUrl.hostname.toLowerCase() === "aml.studiomanagerpro.it";
+  const standaloneDeployment = ["1", "true"].includes(
+    (process.env.AML_STANDALONE_DEPLOYMENT || "").trim().toLowerCase()
+  );
+  const isAmlHost =
+    standaloneDeployment ||
+    request.nextUrl.hostname.toLowerCase() === "aml.studiomanagerpro.it";
   if (isAmlHost) {
     if (pathname === "/") return NextResponse.redirect(new URL("/aml", request.url));
     const allowedPages = [
