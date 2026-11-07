@@ -59,6 +59,48 @@ export default async function handler(req:NextApiRequest,res:NextApiResponse){
     if(eligible.error)throw eligible.error;
     if(!eligible.data||eligible.data.tipo_cliente!=="Persona fisica")ids=[];
   }
+  // Sincronizza il documento già conservato nell'anagrafica con il fascicolo
+  // della pratica selezionata: un solo riferimento, senza duplicare il file.
+  if(req.method==="POST"&&str(req.body?.action)==="sync"){
+    if(!praticaId||ids.length!==1)return res.status(400).json({error:"Pratica o amministratore associato non univoco"});
+    const documents=await db.from("tbclienti_documenti_aml")
+      .select("id,tipo_documento,allegato_documento")
+      .eq("studio_id",studioId).eq("soggetto_cliente_id",ids[0]).eq("attivo",true)
+      .not("allegato_documento","is",null)
+      .order("updated_at",{ascending:false}).limit(1).maybeSingle();
+    if(documents.error)throw documents.error;
+    const doc=documents.data;
+    const path=str(doc?.allegato_documento);
+    if(!path)return res.status(200).json({ok:true,synced:false,reason:"nessun allegato"});
+    const fileName=path.split("/").pop()||"documento";
+    const mime=path.toLowerCase().endsWith(".pdf")?"application/pdf":/\.jpe?g$/i.test(path)?"image/jpeg":/\.png$/i.test(path)?"image/png":null;
+    const bucket=path.startsWith("av4/")?"messaggi-allegati":"allegati";
+    const linked=await db.from("tbAVFascicoliDocumenti").select("id,storage_path")
+      .eq("studio_id",studioId).eq("pratica_id",praticaId)
+      .eq("origine","documento_rappresentante")
+      .order("created_at",{ascending:false}).limit(1).maybeSingle();
+    if(linked.error)throw linked.error;
+    const payload={
+      tipo_documento:"Documento identità",nome_file:fileName,storage_path:path,
+      bucket_name:bucket,mime_type:mime,
+      note:"Documento d'identità associato al rappresentante ("+str(doc.tipo_documento)+")"
+    };
+    if(linked.data?.id){
+      if(str(linked.data.storage_path)!==path){
+        const updated=await db.from("tbAVFascicoliDocumenti").update(payload)
+          .eq("id",linked.data.id).eq("studio_id",studioId).eq("pratica_id",praticaId);
+        if(updated.error)throw updated.error;
+      }
+    }else{
+      const inserted=await db.from("tbAVFascicoliDocumenti").insert({
+        studio_id:studioId,pratica_id:praticaId,cliente_id:clienteId,
+        societa_documento_id:null,origine:"documento_rappresentante",
+        dimensione:null,...payload
+      });
+      if(inserted.error)throw inserted.error;
+    }
+    return res.status(200).json({ok:true,synced:true});
+  }
   if(req.method==="GET"){
    if(!ids.length)return res.status(200).json({ok:true,items:[],notice:"Nessun amministratore persona fisica associato in modo univoco alla pratica. Verifica Organi sociali e l'AV4."});
    const [people,docs]=await Promise.all([

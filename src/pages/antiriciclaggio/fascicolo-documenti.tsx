@@ -337,70 +337,9 @@ const syncDocumentiCollegati = async (
     );
   }
 
- const { data: organoData, error: organoError } = await supabase
-  .from("tbclienti_organi")
-  .select("soggetto_cliente_id")
-  .eq("studio_id", studioId)
-  .eq("cliente_id", effectiveClienteId)
-  .eq("tipo_ruolo", "R")
-  .eq("principale", true)
-  .eq("attivo", true)
-  .limit(1)
-  .maybeSingle();
+ // Il documento del rappresentante è sincronizzato tramite API server
+ // autenticata, per evitare problemi RLS e garantire un solo collegamento.
 
-if (organoError) {
-  throw organoError;
-}
-
-const {data:av4Associato,error:av4AssocError}=await supabase.from("tbAV4").select("soggetto_cliente_id").eq("studio_id",studioId).eq("pratica_id",praticaId).order("created_at",{ascending:false}).limit(1).maybeSingle();
-if(av4AssocError)throw av4AssocError;
-const soggettoClienteId=av4Associato?.soggetto_cliente_id?String(av4Associato.soggetto_cliente_id):organoData?.soggetto_cliente_id?String(organoData.soggetto_cliente_id):null;
-
-if (soggettoClienteId) {
-  const {
-    data: documentoRappresentante,
-    error: documentoRappresentanteError,
-  } = await supabase
-    .from("tbclienti_documenti_aml")
-    .select(`
-      id,
-      tipo_documento,
-      allegato_documento,
-      scadenza_documento
-    `)
-    .eq("studio_id", studioId)
-    .eq("soggetto_cliente_id", soggettoClienteId)
-    .eq("attivo", true)
-    .not("allegato_documento", "is", null)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (documentoRappresentanteError) {
-    throw documentoRappresentanteError;
-  }
-
-  if (documentoRappresentante?.allegato_documento) {
-    await ensureDocumentoInFascicolo({
-      supabase,
-      studioId,
-      praticaId,
-      clienteId: effectiveClienteId,
-      tipoDocumento: "Documento identità",
-      storagePath: documentoRappresentante.allegato_documento,
-      bucketName: documentoRappresentante.allegato_documento.startsWith("av4/")
-        ? "messaggi-allegati"
-        : "allegati",
-      mimeType: getMimeTypeFromPath(
-        documentoRappresentante.allegato_documento
-      ),
-      origine: "documento_rappresentante",
-      note: documentoRappresentante?.tipo_documento
-        ? `Importato da documento rappresentante (${documentoRappresentante.tipo_documento})`
-        : "Importato da documento rappresentante",
-    });
-  }
-}
 };
 
  const calcolaStatoFascicolo = (
@@ -669,6 +608,18 @@ if (av1PrestazioneData?.Prestazione || praticaCorrente.tipo_prestazione) {
 
 setRegolaDiCondottaRichiesta(regolaDiCondotta);
 
+// Recupera anche documenti già caricati prima di questa versione:
+ // il server collega il PDF originale al fascicolo senza copiarlo.
+ if(effectiveClienteId){
+   const {data:{session}}=await supabase.auth.getSession();
+   if(!session?.access_token)throw new Error("Sessione non valida per sincronizzazione documenti.");
+   const response=await fetch("/api/aml/documenti-organi",{
+     method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${session.access_token}`},
+     body:JSON.stringify({action:"sync",cliente_id:effectiveClienteId,pratica_id})
+   });
+   const result=await response.json().catch(()=>({}));
+   if(!response.ok||!result.ok)throw new Error(result.error||"Impossibile sincronizzare il documento d'identità.");
+ }
 const syncKey = `${studioId}|${pratica_id}|${effectiveClienteId || ""}`;
 if (syncedRef.current !== syncKey) {
   syncedRef.current = syncKey;
