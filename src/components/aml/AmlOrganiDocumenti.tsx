@@ -14,7 +14,7 @@ function status(p:Person){
  if(days<=90)return {label:"In scadenza",cls:"bg-amber-100 text-amber-800"};
  return {label:"Valido",cls:"bg-emerald-100 text-emerald-700"};
 }
-export default function AmlOrganiDocumenti({clienteId,praticaId}:{clienteId:string;praticaId?:string}){
+export default function AmlOrganiDocumenti({clienteId,praticaId,onDocumentoSalvato}:{clienteId:string;praticaId?:string;onDocumentoSalvato?:()=>Promise<void>}){
  const [items,setItems]=useState<Person[]>([]);
  const [edits,setEdits]=useState<Record<string,{tipo_documento:string;numero_documento:string;scadenza_documento:string}>>({});
  const [uploads,setUploads]=useState<Record<string,File|null>>({});
@@ -61,7 +61,9 @@ export default function AmlOrganiDocumenti({clienteId,praticaId}:{clienteId:stri
     if(upError)throw upError;
    }
    await request("POST",{action,soggetto_cliente_id:id,...edits[id],...(path?{allegato_documento:path}:{})});
-   setUploads(x=>({...x,[id]:null}));setMessage("Documento aggiornato per "+p.nome);await refresh();
+   setUploads(x=>({...x,[id]:null}));await refresh();
+   if(onDocumentoSalvato){try{await onDocumentoSalvato();}catch(syncError){setError("Documento salvato, ma sincronizzazione fascicolo non riuscita: "+(syncError instanceof Error?syncError.message:"errore"));return;}}
+   setMessage("Documento aggiornato per "+p.nome);
   }catch(e){setError(e instanceof Error?e.message:"Errore aggiornamento documento");}finally{setBusy("");}
  }
  if(!clienteId)return null;

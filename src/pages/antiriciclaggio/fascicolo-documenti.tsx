@@ -228,8 +228,11 @@ const { data: existing, error: existingError } = await supabase
     throw existingError;
   }
 
-  if (existing?.id) {
-    return;
+  if (existing?.id) return;
+  if(origine==="documento_rappresentante"){
+    const {data:linked,error:linkedError}=await supabase.from("tbAVFascicoliDocumenti").select("id").eq("studio_id",studioId).eq("pratica_id",praticaId).eq("origine",origine).order("created_at",{ascending:false}).limit(1).maybeSingle();
+    if(linkedError)throw linkedError;
+    if(linked?.id){const {error:updateError}=await supabase.from("tbAVFascicoliDocumenti").update({tipo_documento:tipoDocumento,nome_file:nomeFile,storage_path:storagePath,bucket_name:bucketName,mime_type:mimeType,note}).eq("id",linked.id).eq("studio_id",studioId).eq("pratica_id",praticaId);if(updateError)throw updateError;return;}
   }
 
   const { error: insertError } = await supabase
@@ -349,10 +352,9 @@ if (organoError) {
   throw organoError;
 }
 
-const soggettoClienteId =
-  organoData?.soggetto_cliente_id
-    ? String(organoData.soggetto_cliente_id)
-    : null;
+const {data:av4Associato,error:av4AssocError}=await supabase.from("tbAV4").select("soggetto_cliente_id").eq("studio_id",studioId).eq("pratica_id",praticaId).order("created_at",{ascending:false}).limit(1).maybeSingle();
+if(av4AssocError)throw av4AssocError;
+const soggettoClienteId=av4Associato?.soggetto_cliente_id?String(av4Associato.soggetto_cliente_id):organoData?.soggetto_cliente_id?String(organoData.soggetto_cliente_id):null;
 
 if (soggettoClienteId) {
   const {
@@ -875,7 +877,7 @@ tipo_documento:
 
       const supabase = getSupabaseClient() as any;
 
-      if (doc.storage_path) {
+      if (doc.storage_path && doc.origine !== "documento_rappresentante") {
         const bucketName = doc.bucket_name || "allegati";
 
         const { error: storageError } = await supabase.storage
@@ -1021,7 +1023,7 @@ useEffect(() => {
         </div>
       )}
 
-      {clienteIdPratica && typeof pratica_id==="string" && <AmlOrganiDocumenti clienteId={clienteIdPratica} praticaId={pratica_id} />}
+      {clienteIdPratica && typeof pratica_id==="string" && <AmlOrganiDocumenti clienteId={clienteIdPratica} praticaId={pratica_id} onDocumentoSalvato={async()=>{syncedRef.current=null;await loadData();}} />}
       {typeof pratica_id==="string" && (versioniAV1.length>0||versioniAV4.length>0) && (
  <section className="mb-5 rounded-lg border border-sky-200 bg-white p-4">
   <h2 className="mb-3 font-semibold">Storico moduli della prestazione selezionata</h2>
