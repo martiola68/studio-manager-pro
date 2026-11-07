@@ -14,27 +14,27 @@ function status(p:Person){
  if(days<=90)return {label:"In scadenza",cls:"bg-amber-100 text-amber-800"};
  return {label:"Valido",cls:"bg-emerald-100 text-emerald-700"};
 }
-export default function AmlOrganiDocumenti({clienteId}:{clienteId:string}){
+export default function AmlOrganiDocumenti({clienteId,praticaId}:{clienteId:string;praticaId?:string}){
  const [items,setItems]=useState<Person[]>([]);
  const [edits,setEdits]=useState<Record<string,{tipo_documento:string;numero_documento:string;scadenza_documento:string}>>({});
  const [uploads,setUploads]=useState<Record<string,File|null>>({});
  const [busy,setBusy]=useState("");const [error,setError]=useState("");const [message,setMessage]=useState("");
- const [loading,setLoading]=useState(false);
+ const [loading,setLoading]=useState(false);const [notice,setNotice]=useState("");
  const request=useCallback(async(method:"GET"|"POST",body?:Record<string,unknown>)=>{
   const {data:{session}}=await getSupabaseClient().auth.getSession();
   if(!session?.access_token)throw new Error("Sessione scaduta: accedi nuovamente");
-  const url="/api/aml/documenti-organi"+(method==="GET"?"?cliente_id="+encodeURIComponent(clienteId):"");
-  const res=await fetch(url,{method,headers:{Authorization:"Bearer "+session.access_token,...(method==="POST"?{"Content-Type":"application/json"}:{})},body:method==="POST"?JSON.stringify({cliente_id:clienteId,...body}):undefined,cache:"no-store"});
+  const url="/api/aml/documenti-organi"+(method==="GET"?"?cliente_id="+encodeURIComponent(clienteId)+(praticaId?"&pratica_id="+encodeURIComponent(praticaId):""):"");
+  const res=await fetch(url,{method,headers:{Authorization:"Bearer "+session.access_token,...(method==="POST"?{"Content-Type":"application/json"}:{})},body:method==="POST"?JSON.stringify({cliente_id:clienteId,...(praticaId?{pratica_id:praticaId}:{}),...body}):undefined,cache:"no-store"});
   const data=await res.json().catch(()=>({}));
   if(!res.ok||!data.ok)throw new Error(data.error||"Operazione non riuscita");
   return data;
- },[clienteId]);
+ },[clienteId,praticaId]);
  const refresh=useCallback(async()=>{
   if(!clienteId){setItems([]);return;}
   setLoading(true);setError("");
   try{
    const d=await request("GET");
-   const rows:Person[]=d.items||[];setItems(rows);
+   const rows:Person[]=d.items||[];setItems(rows);setNotice(String(d.notice||""));
    setEdits(Object.fromEntries(rows.map(p=>[p.soggetto_cliente_id,{tipo_documento:p.documento?.tipo_documento||"",numero_documento:p.documento?.numero_documento||"",scadenza_documento:p.documento?.scadenza_documento||""}])));
   }catch(e){setError(e instanceof Error?e.message:"Errore caricamento documenti");}finally{setLoading(false);}
  },[clienteId,request]);
@@ -67,12 +67,12 @@ export default function AmlOrganiDocumenti({clienteId}:{clienteId:string}){
  if(!clienteId)return null;
  return <section className="mb-5 rounded-lg border border-sky-200 bg-white p-4">
   <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-   <div><h2 className="text-base font-bold">Documenti d'identità – Organi sociali</h2><p className="text-xs text-slate-500">Un documento per nominativo, condiviso fra tutte le pratiche AML. Avvisi centrali a 90, 60, 30 e 7 giorni.</p></div>
+   <div><h2 className="text-base font-bold">Documento d'identità – Amministratore associato</h2><p className="text-xs text-slate-500">Documento del rappresentante associato alla pratica, condiviso tra gli incarichi. Avvisi centralizzati.</p></div>
    <div className="flex gap-2"><Link href={"/aml/clienti/organi-sociali?cliente_id="+encodeURIComponent(clienteId)} className="rounded border border-sky-400 px-3 py-2 text-xs font-semibold text-sky-700">Organi sociali</Link><button onClick={()=>void refresh()} type="button" className="rounded border px-3 py-2 text-xs">Aggiorna</button></div>
   </div>
   {error&&<p role="alert" className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>}
   {message&&<p className="mb-3 rounded bg-emerald-50 p-2 text-sm text-emerald-700">{message}</p>}
-  {loading?<p className="py-3 text-sm text-slate-500">Caricamento documenti...</p>:!items.length?<p className="text-sm text-slate-500">Nessun organo sociale attivo. Aggiungi i nominativi nella scheda Organi sociali.</p>:
+  {loading?<p className="py-3 text-sm text-slate-500">Caricamento documenti...</p>:!items.length?<p className="text-sm text-slate-500">{notice||"Nessun amministratore associato alla pratica."}</p>:
    <div className="space-y-3">{items.map(p=>{
     const e=edits[p.soggetto_cliente_id]||{tipo_documento:"",numero_documento:"",scadenza_documento:""};
     const st=status(p);

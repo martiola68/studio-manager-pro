@@ -19,11 +19,39 @@ export default async function handler(req:NextApiRequest,res:NextApiResponse){
   if(!clienteId)return res.status(400).json({error:"Cliente mancante"});
   const cliente=await db.from("tbclienti").select("id").eq("studio_id",studioId).eq("id",clienteId).maybeSingle();
   if(cliente.error||!cliente.data)return res.status(403).json({error:"Cliente non appartenente allo studio"});
-  const org=await db.from("tbclienti_organi").select("soggetto_cliente_id").eq("studio_id",studioId).eq("cliente_id",clienteId).eq("attivo",true);
+  // Solo il rappresentante principale collegato alla pratica AV4.
+  // Nessun elenco indiscriminato di organi sociali o società.
+  const praticaId=str(req.method==="GET"?req.query.pratica_id:req.body?.pratica_id);
+  let av4SoggettoId="";
+  if(praticaId){
+    const pratica=await db.from("tbPraticheAML").select("id,av4_corrente_id,av4_id").eq("id",praticaId).eq("cliente_id",clienteId).eq("studio_id",studioId).maybeSingle();
+    if(pratica.error)throw pratica.error;
+    if(!pratica.data)return res.status(403).json({error:"Pratica AML non appartenente al cliente"});
+    const av4Id=pratica.data.av4_corrente_id||pratica.data.av4_id;
+    let av4Query=db.from("tbAV4").select("soggetto_cliente_id").eq("pratica_id",praticaId).eq("studio_id",studioId);
+    av4Query=av4Id?av4Query.eq("id",av4Id):av4Query.order("created_at",{ascending:false}).limit(1);
+    const av4=await av4Query.maybeSingle();
+    if(av4.error)throw av4.error;
+    av4SoggettoId=str(av4.data?.soggetto_cliente_id);
+  }
+  const org=await db.from("tbclienti_organi").select("soggetto_cliente_id").eq("studio_id",studioId).eq("cliente_id",clienteId).eq("tipo_ruolo","R").eq("principale",true).eq("attivo",true);
   if(org.error)throw org.error;
-  const ids=[...new Set((org.data||[]).map((r:any)=>str(r.soggetto_cliente_id)).filter(Boolean))] as string[];
+  const principali=[...new Set((org.data||[]).map((r:any)=>str(r.soggetto_cliente_id)).filter(Boolean))] as string[];
+  let candidateId=av4SoggettoId || (principali.length===1?principali[0]:"");
+  // Il rappresentante selezionato deve comunque appartenere agli organi attivi.
+  if(candidateId&&!principali.includes(candidateId)){
+    const link=await db.from("tbclienti_organi").select("soggetto_cliente_id").eq("studio_id",studioId).eq("cliente_id",clienteId).eq("soggetto_cliente_id",candidateId).eq("tipo_ruolo","R").eq("attivo",true).limit(1).maybeSingle();
+    if(link.error)throw link.error;
+    if(!link.data)candidateId="";
+  }
+  let ids=candidateId?[candidateId]:[];
+  if(ids.length){
+    const eligible=await db.from("tbclienti").select("id,tipo_cliente").eq("studio_id",studioId).eq("id",candidateId).maybeSingle();
+    if(eligible.error)throw eligible.error;
+    if(!eligible.data||eligible.data.tipo_cliente!=="Persona fisica")ids=[];
+  }
   if(req.method==="GET"){
-   if(!ids.length)return res.status(200).json({ok:true,items:[]});
+   if(!ids.length)return res.status(200).json({ok:true,items:[],notice:"Nessun amministratore persona fisica associato in modo univoco alla pratica. Verifica Organi sociali e l'AV4."});
    const [people,docs]=await Promise.all([
      db.from("tbclienti").select("id,ragione_sociale,email").eq("studio_id",studioId).in("id",ids),
      db.from("tbclienti_documenti_aml").select("id,soggetto_cliente_id,tipo_documento,numero_documento,scadenza_documento,allegato_documento,microsoft_connection_id").eq("studio_id",studioId).eq("attivo",true).in("soggetto_cliente_id",ids).order("updated_at",{ascending:false})
@@ -44,7 +72,7 @@ export default async function handler(req:NextApiRequest,res:NextApiResponse){
    return res.status(200).json({ok:true,items});
   }
   const soggettoId=str(req.body?.soggetto_cliente_id),action=str(req.body?.action)||"save";
-  if(!ids.includes(soggettoId))return res.status(403).json({error:"Organo non associato al cliente"});
+  if(!ids.includes(soggettoId))return res.status(403).json({error:"Amministratore non associato alla pratica selezionata"});
   const existing=await db.from("tbclienti_documenti_aml").select("id,tipo_documento,numero_documento,scadenza_documento,allegato_documento,microsoft_connection_id").eq("studio_id",studioId).eq("soggetto_cliente_id",soggettoId).eq("attivo",true).order("updated_at",{ascending:false}).limit(1);
   if(existing.error)throw existing.error;
   let doc=existing.data?.[0]||null;

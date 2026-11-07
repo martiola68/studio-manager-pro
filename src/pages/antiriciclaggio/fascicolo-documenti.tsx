@@ -1021,7 +1021,7 @@ useEffect(() => {
         </div>
       )}
 
-      {clienteIdPratica && <AmlOrganiDocumenti clienteId={clienteIdPratica} />}
+      {clienteIdPratica && typeof pratica_id==="string" && <AmlOrganiDocumenti clienteId={clienteIdPratica} praticaId={pratica_id} />}
       {typeof pratica_id==="string" && (versioniAV1.length>0||versioniAV4.length>0) && (
  <section className="mb-5 rounded-lg border border-sky-200 bg-white p-4">
   <h2 className="mb-3 font-semibold">Storico moduli della prestazione selezionata</h2>
