@@ -51,7 +51,7 @@ export default function CentroAlertAMLPage(){
  const errorStates=new Set(["scaduta","scade_oggi"]);
  return <div className="space-y-5">
    <div className="flex flex-wrap items-start justify-between gap-3">
-     <div><Link href="/aml" className="mb-2 inline-flex items-center gap-1 text-sm text-blue-600"><ArrowLeft className="h-4 w-4"/> Cruscotto AML</Link>
+     <div><Link href={typeof window !== "undefined" && window.location.pathname.startsWith("/antiriciclaggio/")?"/antiriciclaggio/cruscotto":"/aml"} className="mb-2 inline-flex items-center gap-1 text-sm text-blue-600"><ArrowLeft className="h-4 w-4"/> Cruscotto AML</Link>
      <h1 className="text-3xl font-bold text-slate-900">Centro Alert</h1>
      <p className="mt-1 text-sm text-slate-500">Solo avvisi antiriciclaggio, elaborati dal motore centrale SMP</p></div>
      <button type="button" onClick={()=>setReload(n=>n+1)} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50"><RefreshCw className={"h-4 w-4 "+(loading?"animate-spin":"")}/> Aggiorna</button>

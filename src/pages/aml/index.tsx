@@ -49,13 +49,15 @@ function StatCard({ label, value, detail, icon: Icon, tone, href }: {
     <ArrowRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-1" />
   </Link>;
 }
-export default function AmlDashboardPage() {
+export default function AmlDashboardPage({smpMode=false}:{smpMode?:boolean} = {}) {
   const { ready, session } = useRequireAuth();
   const { studioId, isLoading: licenseLoading, hasModule } = useStudio();
   const [state, setState] = useState<DataState>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [refresh, setRefresh] = useState(0);
   const licenseAllowed = !!studioId && hasModule("aml");
+  const clientsHref=smpMode?"/clienti":"/aml/clienti";
+  const alertsHref=smpMode?"/antiriciclaggio/alert":"/aml/alert";
   useEffect(() => {
     if (!ready || !session?.access_token || licenseLoading || !licenseAllowed) {
       setLoading(false);
@@ -133,6 +135,7 @@ export default function AmlDashboardPage() {
       <div><h1 className="text-3xl font-bold tracking-tight text-slate-900">Cruscotto AML</h1><p className="mt-1 text-sm text-slate-500">Panoramica antiriciclaggio · dati del gestionale Studio Manager Pro</p></div>
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={() => setRefresh(n => n+1)} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50" title="Aggiorna dati"><RefreshCw className={"h-4 w-4 " + (loading ? "animate-spin" : "")} /> Aggiorna</button>
+        <Link href="/antiriciclaggio" className="inline-flex items-center gap-2 rounded-lg border border-blue-300 bg-white px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"><FolderOpen className="h-4 w-4" /> Elenco pratiche AML</Link>
         <Link href="/antiriciclaggio/pratiche/nuovo" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"><Plus className="h-4 w-4" /> Nuova pratica AML</Link>
       </div>
     </div>
@@ -140,10 +143,10 @@ export default function AmlDashboardPage() {
       <AlertTriangle className="mr-2 inline h-4 w-4" />Alcuni indicatori non sono disponibili. {state.errors.join(" · ")}
     </div>}
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-      <StatCard label="Clienti attivi" value={state.clients} detail="Anagrafiche condivise" icon={Users} tone="blue" href="/aml/clienti"/>
+      <StatCard label="Clienti attivi" value={state.clients} detail="Anagrafiche condivise" icon={Users} tone="blue" href={clientsHref}/>
       <StatCard label="Pratiche AML" value={state.practices?.length ?? null} detail="Pratiche registrate" icon={ClipboardCheck} tone="green" href="/antiriciclaggio"/>
       <StatCard label="Verifiche in scadenza" value={dueVerifiche} detail="Entro 30 giorni, anche scadute" icon={Clock3} tone="amber" href="/antiriciclaggio"/>
-      <StatCard label="Alert AML aperti" value={state.scadenze?.length ?? null} detail="Motore generale SMP" icon={BellRing} tone="red" href="/aml/alert"/>
+      <StatCard label="Alert AML aperti" value={state.scadenze?.length ?? null} detail="Motore generale SMP" icon={BellRing} tone="red" href={alertsHref}/>
       <StatCard label="Fascicoli incompleti" value={state.fascicoliMancanti} detail="Documenti da verificare" icon={FolderOpen} tone="amber" href="/antiriciclaggio/fascicolo-documenti"/>
     </div>
     <div className="grid gap-4 xl:grid-cols-3">
@@ -173,7 +176,7 @@ export default function AmlDashboardPage() {
         <Link href="/antiriciclaggio" className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-blue-600">Apri pratiche <ArrowRight className="h-4 w-4"/></Link>
       </section>
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex justify-between gap-3"><h2 className="text-lg font-semibold">Scadenze AML</h2><Link href="/aml/alert?ambito=aml" className="text-sm text-blue-600">Vedi tutte</Link></div>
+        <div className="mb-4 flex justify-between gap-3"><h2 className="text-lg font-semibold">Scadenze AML</h2><Link href={alertsHref+"?ambito=aml"} className="text-sm text-blue-600">Vedi tutte</Link></div>
         {state.scadenze === null ? <p className="text-sm text-slate-500">Dati non disponibili</p> : !prossimoAml.length ?
         <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">Nessuna scadenza AML aperta nel motore centrale.</p> :
         <div className="divide-y divide-slate-100">{prossimoAml.map(item=><div className="flex items-center gap-3 py-3" key={item.id}>
@@ -189,7 +192,7 @@ export default function AmlDashboardPage() {
         <div className="mb-4 flex justify-between"><h2 className="font-semibold">Alert AML</h2><BellRing className="h-5 w-5 text-blue-500"/></div>
         <div className="space-y-3">
           <p className="flex justify-between text-sm"><span>Scadenze AML aperte</span><strong>{state.generalAlerts?.length ?? "—"}</strong></p>
-          <Link href="/aml/alert" className="inline-flex items-center gap-1 text-sm font-semibold text-blue-600">Apri gli alert AML <ArrowRight className="h-4 w-4"/></Link>
+          <Link href={alertsHref} className="inline-flex items-center gap-1 text-sm font-semibold text-blue-600">Apri gli alert AML <ArrowRight className="h-4 w-4"/></Link>
         </div>
       </section>
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

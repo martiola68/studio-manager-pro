@@ -882,7 +882,7 @@ async function salvaSocioCompagine() {
   await caricaCompagineSocieta(
     compagineSocietaId
   );
-  await caricaTitolariEffettivi();
+  setDatiTitolariEffettivi(null);
 }
 
 function modificaSocioCompagine(
@@ -948,7 +948,7 @@ async function eliminaSocioCompagine(
   await caricaCompagineSocieta(
     compagineSocietaId
   );
-  await caricaTitolariEffettivi();
+  setDatiTitolariEffettivi(null);
 }
 
 function apriCompagineFiglia(
@@ -1326,24 +1326,9 @@ async function caricaOrgani() {
         )
       );
 
-      /*
-       * Il Titolare Effettivo non deve rallentare l'ingresso nella pagina.
-       * Lo avviamo quando il browser e' libero, dopo che gli organi sono gia' visibili.
-       */
-      const avviaTitolareEffettivo = () => {
-        void caricaTitolariEffettivi().catch((error) => {
-          console.error(
-            "Errore aggiornamento Titolare Effettivo:",
-            error
-          );
-        });
-      };
-
-      if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-        (window as any).requestIdleCallback(avviaTitolareEffettivo, { timeout: 1200 });
-      } else if (typeof window !== "undefined") {
-        globalThis.setTimeout(avviaTitolareEffettivo, 350);
-      }
+      // Calcolo titolare effettivo esclusivamente su richiesta dell'utente.
+      setDatiTitolariEffettivi(null);
+      setErroreTitolariEffettivi("");
 
       /*
        * I diritti collegati NON vengono precaricati qui.
@@ -2282,19 +2267,23 @@ return (
 
     <button
       type="button"
-      onClick={() =>
-        router.push({
-          pathname: "/clienti/titolari-effettivi/verifica",
-          query: { cliente_id: clienteId },
-        })
-      }
+      onClick={() => void caricaTitolariEffettivi()}
+      disabled={loadingTitolariEffettivi}
       style={{ ...blueButton, width: 190, height: 40, minWidth: 190, minHeight: 40, padding: "0 16px", display: "inline-flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(110deg, #0b4f7d 0%, #0d6f9f 58%, #1688b7 100%)", border: "1px solid #0d6f9f", whiteSpace: "nowrap" }}
     >
-      Verifica Titolari Effettivi
+      {loadingTitolariEffettivi ? "Verifica in corso..." : "Verifica Titolari Effettivi"}
     </button>
   </div>
 </div>
 
+    {datiTitolariEffettivi && !loadingTitolariEffettivi && (
+      <div style={{marginTop:10}}>
+        <button type="button" onClick={()=>void router.push({pathname:"/clienti/titolari-effettivi/verifica",query:{cliente_id:clienteId}})}
+          style={{background:"white",border:"1px solid #0d6f9f",color:"#0d6f9f",borderRadius:8,padding:"8px 14px",fontWeight:600}}>
+          Apri verifica dettagliata
+        </button>
+      </div>
+    )}
     {loadingTitolariEffettivi ? (
       <div
         style={{
@@ -2317,9 +2306,11 @@ return (
       >
         {erroreTitolariEffettivi}
       </div>
-    ) : !datiTitolariEffettivi ||
-      datiTitolariEffettivi
-        .titolari_effettivi.length === 0 ? (
+    ) : !datiTitolariEffettivi ? (
+      <div style={{marginTop:18,padding:14,borderRadius:9,background:"#eff6ff",color:"#1e40af",fontSize:13}}>
+        Calcolo non eseguito. Premi <strong>Verifica Titolari Effettivi</strong> per ottenere il risultato aggiornato.
+      </div>
+    ) : datiTitolariEffettivi.titolari_effettivi.length === 0 ? (
       <div
         style={{
           marginTop: 18,

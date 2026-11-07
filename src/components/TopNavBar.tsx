@@ -369,6 +369,7 @@ export function TopNavBar() {
         label: "Antiriciclaggio",
         icon: <ShieldCheck className="h-4 w-4" />,
         children: [
+          { label: "Cruscotto AML", href: "/antiriciclaggio/cruscotto", icon: <ShieldCheck className="h-4 w-4" /> },
           { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: <ShieldCheck className="h-4 w-4" /> },
           { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: <FileText className="h-4 w-4" /> },
           { label: "Professionisti", href: "/antiriciclaggio/responsabili-av", icon: <Users className="h-4 w-4" /> },
