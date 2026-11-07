@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
-import { FolderOpen, Trash2, X } from "lucide-react";
+import { FolderOpen, Trash2 } from "lucide-react";
 
 type Cliente = {
   id: string;
@@ -104,7 +104,7 @@ export default function AntiriciclaggioPage() {
   const [ricercaCliente, setRicercaCliente] = useState("");
 
   const [unlockedSocietaId, setUnlockedSocietaId] = useState<string | null>(null);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [av7ReauthRequired, setAv7ReauthRequired] = useState(false);
   const [password, setPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState("");
@@ -381,7 +381,7 @@ export default function AntiriciclaggioPage() {
     setRicercaCliente("");
     setPassword("");
     setPasswordError("");
-    setShowPasswordModal(false);
+    setAv7ReauthRequired(false);
     setShowForgotPasswordInfo(false);
     setWorkingId(null);
     if (typeof window !== "undefined") {
@@ -540,12 +540,12 @@ export default function AntiriciclaggioPage() {
     setUnlockedSocietaId(null);
     if (!societaId) {
       setSelectedSocieta(null);
-      setShowPasswordModal(false);
+      setAv7ReauthRequired(false);
       return;
     }
     const societa = societaOptions.find((s) => s.id === societaId) || null;
     setSelectedSocieta(societa);
-    setShowPasswordModal(!!societa?.antiriciclaggio_enabled);
+    setAv7ReauthRequired(false);
   };
 
   const handleUnlockSocieta = async () => {
@@ -570,7 +570,7 @@ export default function AntiriciclaggioPage() {
         sessionStorage.setItem(AML_SELECTED_SOCIETA_KEY, selectedSocieta.id);
         if (data.av7AccessProof) sessionStorage.setItem(AML_AV7_PROOF_KEY, data.av7AccessProof);
       }
-      setShowPasswordModal(false);
+      setAv7ReauthRequired(false);
       setShowForgotPasswordInfo(false);
       setPassword("");
       await loadRowsBySocieta(selectedSocieta.id);
@@ -618,7 +618,7 @@ export default function AntiriciclaggioPage() {
     // una pagina con errore e non aggirare la protezione.
     if (isProtectedSocieta && !sessionStorage.getItem(AML_AV7_PROOF_KEY)) {
       setPasswordError("");
-      setShowPasswordModal(true);
+      setAv7ReauthRequired(true);
       return;
     }
     router.push(`/antiriciclaggio/controllo-costante?pratica_id=${row.pratica_id}`);
@@ -676,6 +676,24 @@ export default function AntiriciclaggioPage() {
           {societaOptions.map((soc) => <option key={soc.id} value={soc.id}>{soc.Denominazione}</option>)}
         </select>
         {isSocietaSelectionLocked && selectedSocieta && <div className="mt-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">Accesso attivo su <span className="font-semibold">{selectedSocieta.Denominazione}</span>. Per cambiare soggetto responsabile usa prima <span className="font-semibold">Chiudi accesso</span>.</div>}
+        {selectedSocieta && isProtectedSocieta && (!canAccessAntiriciclaggio || av7ReauthRequired) && (
+          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+            <label htmlFor="aml-password-inline" className="mb-1 block text-sm font-semibold text-amber-900">
+              {av7ReauthRequired ? "Verifica nuovamente la password per AV7" : "Password del soggetto responsabile"}
+            </label>
+            <form onSubmit={(e) => { e.preventDefault(); if (!passwordLoading) void handleUnlockSocieta(); }} className="flex flex-wrap gap-2">
+              <input id="aml-password-inline" type="password" autoComplete="current-password"
+                value={password} onChange={(e) => setPassword(e.target.value)}
+                className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500"
+                aria-invalid={!!passwordError} aria-describedby={passwordError ? "aml-password-error" : undefined} />
+              <button type="submit" disabled={passwordLoading || !password.trim()}
+                className="rounded-lg bg-[#0369a1] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {passwordLoading ? "Verifica..." : "Sblocca"}
+              </button>
+            </form>
+            {passwordError && <p id="aml-password-error" role="alert" className="mt-2 text-sm text-red-700">{passwordError}</p>}
+          </div>
+        )}
       </div>
 
       {canAccessAntiriciclaggio && (
@@ -812,7 +830,6 @@ export default function AntiriciclaggioPage() {
         </div>
       )}
 
-      {showPasswordModal && selectedSocieta && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"><div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl"><div className="mb-4 flex items-start justify-between"><div><h2 className="text-lg font-semibold">Accesso riservato antiriciclaggio</h2><p className="mt-1 text-sm text-gray-600">Inserisci la password per accedere alla società <span className="font-medium">{selectedSocieta.Denominazione}</span>.</p></div><button onClick={() => { setShowPasswordModal(false); setSocietaFilter(""); setSelectedSocieta(null); clearAccessState(); }}><X className="h-5 w-5"/></button></div><input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !passwordLoading) void handleUnlockSocieta(); }} className="w-full rounded-md border px-3 py-2" autoFocus/>{passwordError && <div className="mt-3 text-sm text-red-700">{passwordError}</div>}<div className="mt-4 flex justify-end gap-2"><button onClick={() => setShowPasswordModal(false)} className="rounded border px-4 py-2">Annulla</button><button onClick={() => void handleUnlockSocieta()} disabled={passwordLoading} className="rounded bg-blue-600 px-4 py-2 text-white">{passwordLoading ? "Verifica..." : "Accedi"}</button></div></div></div>}
 
 
     </div>
