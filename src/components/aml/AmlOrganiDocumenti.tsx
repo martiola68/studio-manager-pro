@@ -14,7 +14,7 @@ function status(p:Person){
  if(days<=90)return {label:"In scadenza",cls:"bg-amber-100 text-amber-800"};
  return {label:"Valido",cls:"bg-emerald-100 text-emerald-700"};
 }
-export default function AmlOrganiDocumenti({clienteId,praticaId,onDocumentoSalvato}:{clienteId:string;praticaId?:string;onDocumentoSalvato?:()=>Promise<void>}){
+export default function AmlOrganiDocumenti({clienteId,praticaId,onDocumentoSalvato,onStatoChange}:{clienteId:string;praticaId?:string;onDocumentoSalvato?:()=>Promise<void>;onStatoChange?:(value:string)=>void}){
  const [items,setItems]=useState<Person[]>([]);
  const [edits,setEdits]=useState<Record<string,{tipo_documento:string;numero_documento:string;scadenza_documento:string}>>({});
  const [uploads,setUploads]=useState<Record<string,File|null>>({});
@@ -37,10 +37,10 @@ export default function AmlOrganiDocumenti({clienteId,praticaId,onDocumentoSalva
   setLoading(true);setError("");
   try{
    const d=await request("GET");
-   const rows:Person[]=d.items||[];setItems(rows);setNotice(String(d.notice||""));
+   const rows:Person[]=d.items||[];setItems(rows);setNotice(String(d.notice||""));if(onStatoChange)onStatoChange(rows.length?status(rows[0]).label:"Non associato");
    setEdits(Object.fromEntries(rows.map(p=>[p.soggetto_cliente_id,{tipo_documento:p.documento?.tipo_documento==="Carta d'identità"?"Carta di identità":p.documento?.tipo_documento||"",numero_documento:p.documento?.numero_documento||"",scadenza_documento:p.documento?.scadenza_documento||""}])));
   }catch(e){setError(e instanceof Error?e.message:"Errore caricamento documenti");}finally{setLoading(false);}
- },[clienteId,request]);
+ },[clienteId,request,onStatoChange]);
  useEffect(()=>{void refresh();},[refresh]);
  const update=(id:string,k:"tipo_documento"|"numero_documento"|"scadenza_documento",v:string)=>setEdits(prev=>({...prev,[id]:{...(prev[id]||{tipo_documento:"",numero_documento:"",scadenza_documento:""}),[k]:v}}));
  async function execute(p:Person,action:"save"|"request"|"remove"){

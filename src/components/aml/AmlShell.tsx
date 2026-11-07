@@ -55,7 +55,7 @@ export function AmlShell({ children }: { children: ReactNode }) {
         const active = pathname === dest || (dest === "/antiriciclaggio" && (pathname === "/antiriciclaggio/pratiche/nuovo" || pathname.startsWith("/antiriciclaggio/pratiche/") || pathname.includes("/modello-av") || pathname.includes("/fascicolo-documenti"))) || (dest === "/aml/clienti" && pathname.startsWith("/aml/clienti/")) || (dest === "/aml/societa" && pathname.startsWith("/aml/societa/")) || (dest === "/aml/utenti" && pathname.startsWith("/aml/utenti/"));
         return (
           <Link key={label} href={href} onClick={() => setMobileOpen(false)}
-            className={"flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors " + (active ? "bg-blue-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-700/70 hover:text-white")}>
+            className={"flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors " + (active ? "bg-white text-[#08618b] shadow-sm" : "text-white/90 hover:bg-white/15 hover:text-white")}>
             <Icon className="h-5 w-5 shrink-0" />
             <span className="flex-1">{label}</span>
             {active && <ChevronRight className="h-4 w-4" />}
@@ -68,15 +68,15 @@ export function AmlShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-[#f3f6fb] text-slate-900">
       {mobileOpen && <button type="button" className="fixed inset-0 z-[60] bg-slate-950/60 lg:hidden" aria-label="Chiudi menu" onClick={() => setMobileOpen(false)} />}
-      <aside className={"fixed inset-y-0 left-0 z-[70] flex w-64 flex-col bg-[#102238] text-white shadow-2xl transition-transform lg:translate-x-0 " + (mobileOpen ? "translate-x-0" : "-translate-x-full")}>
-        <div className="flex items-center gap-3 border-b border-slate-700/70 px-5 py-5">
-          <ShieldCheck className="h-10 w-10 shrink-0 text-sky-400" />
-          <div className="min-w-0"><div className="text-[15px] font-bold tracking-tight">Studio Manager Pro</div><div className="text-xs text-sky-300">AML · Antiriciclaggio</div></div>
+      <aside className={"fixed inset-y-0 left-0 z-[70] flex w-64 flex-col bg-gradient-to-b from-[#0b628e] via-[#107fac] to-[#08618b] text-white shadow-xl transition-transform lg:translate-x-0 " + (mobileOpen ? "translate-x-0" : "-translate-x-full")}>
+        <div className="flex items-center gap-3 border-b border-white/20 px-5 py-5">
+          <ShieldCheck className="h-10 w-10 shrink-0 text-white" />
+          <div className="min-w-0"><div className="text-[15px] font-bold tracking-tight">Studio Manager Pro</div><div className="text-xs text-sky-100">AML · Antiriciclaggio</div></div>
           <button type="button" className="ml-auto lg:hidden" aria-label="Chiudi menu" onClick={() => setMobileOpen(false)}><X className="h-5 w-5" /></button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">{nav}</div>
-        <div className="border-t border-slate-700/70 p-3 space-y-1">
-          <button type="button" onClick={() => void hardLogout("/login")} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white">
+        <div className="border-t border-white/20 p-3 space-y-1">
+          <button type="button" onClick={() => void hardLogout("/login")} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/90 hover:bg-white/15 hover:text-white">
             <LogOut className="h-4 w-4" /> Esci
           </button>
         </div>

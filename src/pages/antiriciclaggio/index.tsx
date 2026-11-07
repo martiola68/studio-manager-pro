@@ -200,7 +200,7 @@ export default function AntiriciclaggioPage() {
     const av4Inviato = !!(av4Info?.Av4InviatoCL || av4Info?.public_sent_at || av4Ricevuto);
     if (!row.regola_condotta && !av4Inviato) return { dotClass: "bg-red-500", text: "AV4 da generare", className: "font-semibold text-red-700" };
     if (!row.regola_condotta && !av4Ricevuto) return { dotClass: "bg-yellow-400", text: "AV4 inviato - in attesa", className: "font-semibold text-yellow-700" };
-    if (row.fascicolo_completo === false || !row.fascicolo_confermato) return { dotClass: "bg-yellow-500", text: "Fascicolo da confermare", className: "font-semibold text-yellow-700" };
+    if (row.fascicolo_completo !== true) return { dotClass: "bg-yellow-500", text: "Fascicolo incompleto", className: "font-semibold text-yellow-700" };
     return { dotClass: "bg-green-500", text: "Completa", className: "font-semibold text-green-700" };
   };
 
@@ -369,11 +369,8 @@ export default function AntiriciclaggioPage() {
       }));
       const rowsConFascicolo = await Promise.all(rowsBase.map(async (row) => {
         const check = await checkFascicoloDocumenti(row);
-        const {data:manual}=await supabaseAny.from("tbPraticheAML")
-          .select("fascicolo_completo_manuale").eq("id",row.pratica_id).maybeSingle();
         return { ...row, fascicolo_completo: check.completo, fascicolo_mancanti: check.mancanti,
-          av4_firmato_presente: !!check.av4Presente, regola_condotta: !!check.regolaCondotta,
-          fascicolo_confermato: manual?.fascicolo_completo_manuale===true };
+          av4_firmato_presente: !!check.av4Presente, regola_condotta: !!check.regolaCondotta };
       }));
       setRows(rowsConFascicolo);
     } catch (err: any) {
