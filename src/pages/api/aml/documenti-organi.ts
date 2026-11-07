@@ -127,6 +127,43 @@ export default async function handler(req:NextApiRequest,res:NextApiResponse){
   const existing=await db.from("tbclienti_documenti_aml").select("id,tipo_documento,numero_documento,scadenza_documento,allegato_documento,microsoft_connection_id").eq("studio_id",studioId).eq("soggetto_cliente_id",soggettoId).eq("attivo",true).order("updated_at",{ascending:false}).limit(1);
   if(existing.error)throw existing.error;
   let doc=existing.data?.[0]||null;
+  // Rimuove solo il documento attivo del rappresentante autorizzato.
+  // I file originali restano conservati nello storage per tracciabilita AML;
+  // si eliminano i collegamenti del fascicolo e si annulla l'alert.
+  if(action==="remove"){
+    if(!doc)return res.status(404).json({error:"Nessun documento da rimuovere"});
+    const expectedId=str(req.body?.documento_id);
+    if(!expectedId||expectedId!==str(doc.id))return res.status(409).json({error:"Il documento e stato aggiornato: ricarica prima di rimuovere."});
+    const oldPath=str(doc.allegato_documento);
+    if(!oldPath && !doc.tipo_documento && !doc.numero_documento && !doc.scadenza_documento)return res.status(200).json({ok:true,removed:false});
+    if(oldPath){
+      // Il medesimo file puo essere collegato a piu pratiche dello stesso
+      // studio; non tocchiamo allegati manuali o moduli firmati.
+      const deleted=await db.from("tbAVFascicoliDocumenti").delete()
+        .eq("studio_id",studioId)
+        .eq("origine","documento_rappresentante")
+        .eq("storage_path",oldPath);
+      if(deleted.error)throw deleted.error;
+    }
+    const update=await db.from("tbclienti_documenti_aml")
+      .update({
+        allegato_documento:null,tipo_documento:null,numero_documento:null,
+        scadenza_documento:null,updated_at:new Date().toISOString()
+      })
+      .eq("studio_id",studioId).eq("id",doc.id)
+      .eq("soggetto_cliente_id",soggettoId)
+      .eq("allegato_documento",doc.allegato_documento)
+      .select("id").maybeSingle();
+    if(update.error)throw update.error;
+    if(!update.data)return res.status(409).json({error:"Documento modificato nel frattempo. Aggiorna la pagina."});
+    const a=await db.from("tbscadenze_centrale").update({
+      stato:"annullata",annullata_at:new Date().toISOString(),prossimo_alert_at:null,
+      updated_at:new Date().toISOString()
+    }).eq("studio_id",studioId).eq("origine_tabella","tbclienti_documenti_aml")
+      .eq("origine_record_id",doc.id).eq("stato","attiva");
+    if(a.error)throw a.error;
+    return res.status(200).json({ok:true,removed:true});
+  }
   if(action==="request"){
     if(!doc){const created=await db.from("tbclienti_documenti_aml").insert({studio_id:studioId,soggetto_cliente_id:soggettoId,attivo:true}).select("id,microsoft_connection_id").single();if(created.error)throw created.error;doc=created.data;}
     const person=await db.from("tbclienti").select("ragione_sociale,email").eq("studio_id",studioId).eq("id",soggettoId).single();
