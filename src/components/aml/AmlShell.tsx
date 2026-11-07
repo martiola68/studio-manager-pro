@@ -14,7 +14,6 @@ export const AML_INTERFACE_KEY = "smp_interface_aml";
 const navigation = [
   { label: "Cruscotto AML", href: "/aml", icon: LayoutDashboard },
   { label: "Pratiche AML", href: "/antiriciclaggio", icon: ClipboardCheck },
-  { label: "Rappresentanti", href: "/antiriciclaggio/rappresentanti", icon: Users },
   { label: "Anagrafiche clienti", href: "/aml/clienti", icon: Users },
   { label: "Società responsabili AV", href: "/aml/societa", icon: Building2 },
   { label: "Responsabili verifica", href: "/antiriciclaggio/responsabili-av", icon: Users },

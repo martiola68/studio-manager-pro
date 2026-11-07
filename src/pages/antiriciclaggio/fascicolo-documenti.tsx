@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
+import AmlOrganiDocumenti from "@/components/aml/AmlOrganiDocumenti";
 import { FileText, Image as ImageIcon, File, Trash2 } from "lucide-react";
 
 type ClienteRow = {
@@ -138,6 +139,7 @@ export default function FascicoloDocumentiPage() {
 
   const [loading, setLoading] = useState(true);
   const [clienteNome, setClienteNome] = useState("Cliente");
+  const [clienteIdPratica, setClienteIdPratica] = useState("");
   const [prestazionePratica, setPrestazionePratica] = useState("");
   const [versioniAV1, setVersioniAV1] = useState<Array<{id:number;DataVerifica:string|null;AV1Conferma:boolean|null;Prestazione:string|null}>>([]);
   const [versioniAV4, setVersioniAV4] = useState<Array<{id:string;created_at:string|null;compilato_da_cliente:boolean|null}>>([]);
@@ -601,6 +603,7 @@ if(praticaError)throw praticaError;
 if(!praticaCorrente)throw new Error("Pratica AML non trovata.");
 if(clienteIdValue && praticaCorrente.cliente_id!==clienteIdValue)throw new Error("Cliente e pratica AML non corrispondono.");
 const effectiveClienteId=clienteIdValue||praticaCorrente.cliente_id||null;
+setClienteIdPratica(String(effectiveClienteId || ""));
 setPrestazionePratica(String(praticaCorrente.tipo_prestazione||"").trim());
 let visureRichieste: VisuraTeRichiesta[] = [];
 
@@ -1018,6 +1021,7 @@ useEffect(() => {
         </div>
       )}
 
+      {clienteIdPratica && <AmlOrganiDocumenti clienteId={clienteIdPratica} />}
       {typeof pratica_id==="string" && (versioniAV1.length>0||versioniAV4.length>0) && (
  <section className="mb-5 rounded-lg border border-sky-200 bg-white p-4">
   <h2 className="mb-3 font-semibold">Storico moduli della prestazione selezionata</h2>

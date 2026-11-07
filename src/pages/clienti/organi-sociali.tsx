@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+import AmlOrganiDocumenti from "@/components/aml/AmlOrganiDocumenti";
 
 const ruoli = [
   "tutti",
@@ -2096,6 +2097,8 @@ return (
           ← Torna clienti
         </button>
       </div>
+
+  {router.pathname.startsWith("/aml/") && clienteId && <AmlOrganiDocumenti clienteId={clienteId} />}
 
   <div style={cardStyle}>
   <h2 style={titleStyle}>Selezione società</h2>
