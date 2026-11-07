@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import {
   BellRing, Building2, ChevronRight, ClipboardCheck,
-  LayoutDashboard, LogOut, Menu, ShieldCheck, Users, X, Cloud
+  LayoutDashboard, LogOut, Menu, ShieldCheck, Users, X, Cloud, ClipboardList
 } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { hardLogout } from "@/services/logoutService";
@@ -14,6 +14,7 @@ export const AML_INTERFACE_KEY = "smp_interface_aml";
 const navigation = [
   { label: "Cruscotto AML", href: "/aml", icon: LayoutDashboard },
   { label: "Pratiche AML", href: "/antiriciclaggio", icon: ClipboardCheck },
+  { label: "Da completare", href: "/aml/da-completare", icon: ClipboardList },
   { label: "Anagrafiche clienti", href: "/aml/clienti", icon: Users },
   { label: "Società responsabili AV", href: "/aml/societa", icon: Building2 },
   { label: "Responsabili verifica", href: "/antiriciclaggio/responsabili-av", icon: Users },

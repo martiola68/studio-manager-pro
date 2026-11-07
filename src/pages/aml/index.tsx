@@ -139,7 +139,8 @@ export default function AmlDashboardPage() {
     {state.errors.length > 0 && <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
       <AlertTriangle className="mr-2 inline h-4 w-4" />Alcuni indicatori non sono disponibili. {state.errors.join(" · ")}
     </div>}
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+    <Link href="/aml/da-completare" className="flex items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-800 hover:bg-sky-100"><span className="flex items-center gap-2"><ClipboardCheck className="h-5 w-5"/> Centro «Da completare» · Attività AML per cliente e prestazione</span><ArrowRight className="h-4 w-4"/></Link>
+     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
       <StatCard label="Clienti attivi" value={state.clients} detail="Anagrafiche condivise" icon={Users} tone="blue" href="/aml/clienti"/>
       <StatCard label="Pratiche AML" value={state.practices?.length ?? null} detail="Pratiche registrate" icon={ClipboardCheck} tone="green" href="/antiriciclaggio"/>
       <StatCard label="Verifiche in scadenza" value={dueVerifiche} detail="Entro 30 giorni, anche scadute" icon={Clock3} tone="amber" href="/antiriciclaggio"/>
