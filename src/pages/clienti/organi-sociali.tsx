@@ -2077,7 +2077,7 @@ return (
         <button
           type="button"
           onClick={() => router.push(router.pathname.startsWith("/aml/") && clienteId ? `/aml/clienti/${encodeURIComponent(clienteId)}` : "/clienti")}
-          style={secondaryButton}
+          style={{ ...secondaryButton, width: "auto", height: 34, minHeight: 34, padding: "5px 12px", fontSize: 12, lineHeight: "20px", alignSelf: "flex-start", whiteSpace: "nowrap" }}
         >
           ← Torna clienti
         </button>
