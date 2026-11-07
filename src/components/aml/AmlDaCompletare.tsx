@@ -125,17 +125,16 @@ export default function AmlDaCompletare(){
        if(error)throw new Error(table+": "+error.message);
        return (data||[]) as RecordRow[];
      };
-     const [pratiche,av1rows,av2rows,av4rows,fascicoli,prestazioni]=await Promise.all([
+     const [pratiche,av1rows,av4rows,fascicoli,prestazioni]=await Promise.all([
        read("tbPraticheAML","id,cliente_id,societa_id,tipo_prestazione,data_apertura,stato",{responsabile:true}),
        read("tbAV1","id,pratica_id,AV1Conferma,ScadenzaVerifica,DataVerifica"),
-       read("tbAV2","id,pratica_id,confermato"),
        read("tbAV4","id,pratica_id,public_sent_at,Av4InviatoCL,compilato_da_cliente,av4_caricato_manualmente,allegato_pdf_cliente,pdf_firmato_cliente,created_at"),
        read("tbAVFascicoliAlert","id,pratica_id,completo,documenti_mancanti,updated_at"),
        // Shared catalog has no studio_id, as used by the existing AML list.
        read("tbElencoPrestAR","TipoPrestazioneAR,RischioTipoPrestAR,RegolaDiCondotta",{global:true})
      ]);
      const warnings:string[]=[];
-     for(const [label,rows] of [["Pratiche",pratiche],["AV1",av1rows],["AV2",av2rows],["AV4",av4rows],["Fascicoli",fascicoli],["Prestazioni",prestazioni]] as const){
+     for(const [label,rows] of [["Pratiche",pratiche],["AV1",av1rows],["AV4",av4rows],["Fascicoli",fascicoli],["Prestazioni",prestazioni]] as const){
        if(rows.length===2000)warnings.push(label+": elenco al limite di 2.000 record; verifica i risultati");
      }
      const clients=Array.from(new Set(pratiche.map(p=>String(p.cliente_id||"")).filter(Boolean)));
@@ -150,7 +149,6 @@ export default function AmlDaCompletare(){
      const names=new Map(clienti.map(r=>[String(r.id),String(r.ragione_sociale||r.cod_cliente||"Cliente")]));
      const praticaIds=new Set(pratiche.map(p=>String(p.id)));
      const av1=firstByPratica(av1rows.filter(r=>praticaIds.has(String(r.pratica_id))),"DataVerifica");
-     const av2=firstByPratica(av2rows.filter(r=>praticaIds.has(String(r.pratica_id))),"id");
      const av4=firstByPratica(av4rows.filter(r=>praticaIds.has(String(r.pratica_id))),"created_at");
      const snapshots=firstByPratica(fascicoli.filter(r=>praticaIds.has(String(r.pratica_id))),"updated_at");
      const rules=new Map(prestazioni.map(r=>[normal(r.TipoPrestazioneAR),r]));
@@ -166,15 +164,13 @@ export default function AmlDaCompletare(){
        const params=new URLSearchParams({pratica_id:pid,cliente_id:String(p.cliente_id||""),societa_id:String(p.societa_id||""),studio_id:String(studioId)});
        const urlF="/antiriciclaggio/fascicolo-documenti?"+params.toString();
        const av1url="/antiriciclaggio/modello-av1?"+params.toString();
-       const av2url="/antiriciclaggio/modello-av2?"+params.toString();
        const av4url="/antiriciclaggio/modello-av4?"+params.toString();
-       const a1=av1.get(pid),a2=av2.get(pid),a4=av4.get(pid);
+       const a1=av1.get(pid),a4=av4.get(pid);
        const rule=rules.get(normal(p.tipo_prestazione));
        const exempt=!!rule && normal(rule.RischioTipoPrestAR)==="non significativo" && !!String(rule.RegolaDiCondotta||"").trim();
        if(!exempt){
         if(!a1)add(p,"AV1 da compilare","La pratica non risulta collegata a un modello AV1.", "da-fare",av1url);
         else if(a1.AV1Conferma!==true)add(p,"AV1 da confermare","È presente un AV1 senza conferma registrata.", "da-fare",av1url);
-        if(!a2||a2.confermato!==true)add(p,"AV2 da confermare","Non risulta confermato il modello AV2.", "da-fare",av2url);
         if(!a4)add(p,"AV4 da predisporre","Non risulta un AV4 associato alla pratica.", "da-fare",av4url);
         else {
          const received=!!(String(a4.pdf_firmato_cliente||a4.allegato_pdf_cliente||"").trim() || a4.compilato_da_cliente===true || a4.av4_caricato_manualmente===true);
