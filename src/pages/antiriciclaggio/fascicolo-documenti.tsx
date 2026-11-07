@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
+import AmlOrganiDocumenti from "@/components/aml/AmlOrganiDocumenti";
 import { FileText, Image as ImageIcon, File, Trash2 } from "lucide-react";
 
 type ClienteRow = {
@@ -138,6 +139,7 @@ export default function FascicoloDocumentiPage() {
 
   const [loading, setLoading] = useState(true);
   const [clienteNome, setClienteNome] = useState("Cliente");
+  const [clienteIdPratica, setClienteIdPratica] = useState("");
   const [prestazionePratica, setPrestazionePratica] = useState("");
   
   const [clienteIsSocieta, setClienteIsSocieta] = useState(false);
@@ -333,71 +335,8 @@ const syncDocumentiCollegati = async (
     );
   }
 
- const { data: organoData, error: organoError } = await supabase
-  .from("tbclienti_organi")
-  .select("soggetto_cliente_id")
-  .eq("studio_id", studioId)
-  .eq("cliente_id", effectiveClienteId)
-  .eq("tipo_ruolo", "R")
-  .eq("principale", true)
-  .eq("attivo", true)
-  .limit(1)
-  .maybeSingle();
+ // Collegamento documenti rappresentante tramite API autenticata.
 
-if (organoError) {
-  throw organoError;
-}
-
-const soggettoClienteId =
-  organoData?.soggetto_cliente_id
-    ? String(organoData.soggetto_cliente_id)
-    : null;
-
-if (soggettoClienteId) {
-  const {
-    data: documentoRappresentante,
-    error: documentoRappresentanteError,
-  } = await supabase
-    .from("tbclienti_documenti_aml")
-    .select(`
-      id,
-      tipo_documento,
-      allegato_documento,
-      scadenza_documento
-    `)
-    .eq("studio_id", studioId)
-    .eq("soggetto_cliente_id", soggettoClienteId)
-    .eq("attivo", true)
-    .not("allegato_documento", "is", null)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (documentoRappresentanteError) {
-    throw documentoRappresentanteError;
-  }
-
-  if (documentoRappresentante?.allegato_documento) {
-    await ensureDocumentoInFascicolo({
-      supabase,
-      studioId,
-      praticaId,
-      clienteId: effectiveClienteId,
-      tipoDocumento: "Documento identità",
-      storagePath: documentoRappresentante.allegato_documento,
-      bucketName: documentoRappresentante.allegato_documento.startsWith("av4/")
-        ? "messaggi-allegati"
-        : "allegati",
-      mimeType: getMimeTypeFromPath(
-        documentoRappresentante.allegato_documento
-      ),
-      origine: "documento_rappresentante",
-      note: documentoRappresentante?.tipo_documento
-        ? `Importato da documento rappresentante (${documentoRappresentante.tipo_documento})`
-        : "Importato da documento rappresentante",
-    });
-  }
-}
 };
 
  const calcolaStatoFascicolo = (
@@ -595,6 +534,14 @@ body: JSON.stringify({
     ? cliente_id
     : null;
 
+const {data:praticaAttiva,error:praticaAttivaError}=await supabase
+  .from("tbPraticheAML").select("cliente_id").eq("studio_id",studioId).eq("id",pratica_id).maybeSingle();
+if(praticaAttivaError)throw praticaAttivaError;
+if(!praticaAttiva?.cliente_id)throw new Error("Cliente non trovato per la pratica AML.");
+if(clienteIdValue && clienteIdValue!==praticaAttiva.cliente_id)throw new Error("Cliente e pratica AML non corrispondono.");
+const effectiveClienteId=String(praticaAttiva.cliente_id);
+setClienteIdPratica(effectiveClienteId);
+
 let visureRichieste: VisuraTeRichiesta[] = [];
 
 if (clienteIdValue) {
@@ -657,10 +604,20 @@ if (av1PrestazioneData?.Prestazione) {
 
 setRegolaDiCondottaRichiesta(regolaDiCondotta);
 
-const syncKey = `${studioId}|${pratica_id}|${clienteIdValue || ""}`;
+// Collega anche i documenti già archiviati, senza una seconda copia del PDF.
+const {data:{session}}=await supabase.auth.getSession();
+if(!session?.access_token)throw new Error("Sessione non valida per sincronizzare documenti.");
+const responseDoc=await fetch("/api/aml/documenti-organi",{
+  method:"POST",
+  headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
+  body:JSON.stringify({action:"sync",cliente_id:effectiveClienteId,pratica_id})
+});
+const dataDoc=await responseDoc.json().catch(()=>({}));
+if(!responseDoc.ok||!dataDoc.ok)throw new Error(dataDoc.error||"Errore sincronizzazione documento rappresentante.");
+const syncKey = `${studioId}|${pratica_id}|${effectiveClienteId}`;
 if (syncedRef.current !== syncKey) {
+  await syncDocumentiCollegati(supabase, studioId, pratica_id, effectiveClienteId);
   syncedRef.current = syncKey;
-  await syncDocumentiCollegati(supabase, studioId, pratica_id, clienteIdValue);
 }
       
 const { data: clienteCheckData } = await supabase
@@ -865,7 +822,7 @@ tipo_documento:
 
       const supabase = getSupabaseClient() as any;
 
-      if (doc.storage_path) {
+      if (doc.storage_path && doc.origine !== "documento_rappresentante") {
         const bucketName = doc.bucket_name || "allegati";
 
         const { error: storageError } = await supabase.storage
@@ -1023,6 +980,8 @@ useEffect(() => {
 ) : null}
         </div>
       )}
+
+      {clienteIdPratica && typeof pratica_id === "string" && <AmlOrganiDocumenti clienteId={clienteIdPratica} praticaId={pratica_id} onDocumentoSalvato={async()=>{syncedRef.current=null;await loadData();}} />}
 
       {typeof pratica_id === "string" && (
         <div className="mb-4 flex flex-wrap gap-2">
