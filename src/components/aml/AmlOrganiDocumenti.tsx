@@ -21,6 +21,7 @@ export default function AmlOrganiDocumenti({clienteId,praticaId,onDocumentoSalva
  const [busy,setBusy]=useState("");const [error,setError]=useState("");const [message,setMessage]=useState("");
  const [loading,setLoading]=useState(false);const [notice,setNotice]=useState("");
  const [requestFor,setRequestFor]=useState<Person|null>(null);
+ const [removeFor,setRemoveFor]=useState<Person|null>(null);
  const [recipientEmail,setRecipientEmail]=useState("");
  const request=useCallback(async(method:"GET"|"POST",body?:Record<string,unknown>)=>{
   const {data:{session}}=await getSupabaseClient().auth.getSession();
@@ -42,9 +43,19 @@ export default function AmlOrganiDocumenti({clienteId,praticaId,onDocumentoSalva
  },[clienteId,request]);
  useEffect(()=>{void refresh();},[refresh]);
  const update=(id:string,k:"tipo_documento"|"numero_documento"|"scadenza_documento",v:string)=>setEdits(prev=>({...prev,[id]:{...(prev[id]||{tipo_documento:"",numero_documento:"",scadenza_documento:""}),[k]:v}}));
- async function execute(p:Person,action:"save"|"request"){
+ async function execute(p:Person,action:"save"|"request"|"remove"){
   const id=p.soggetto_cliente_id;setBusy(id);setError("");setMessage("");
   try{
+   if(action==="remove"){
+     if(!p.documento?.id)throw new Error("Documento non trovato. Aggiorna la pagina.");
+     await request("POST",{action,soggetto_cliente_id:id,documento_id:p.documento.id});
+     setRemoveFor(null);
+     setUploads(x=>({...x,[id]:null}));
+     await refresh();
+     if(onDocumentoSalvato)await onDocumentoSalvato();
+     setMessage("Documento rimosso dal fascicolo e dall'archivio attivo. Originale conservato per tracciabilita.");
+     return;
+   }
    if(action==="request"){
      const email=recipientEmail.trim();
      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new Error("Inserisci un indirizzo email valido.");
@@ -102,9 +113,22 @@ export default function AmlOrganiDocumenti({clienteId,praticaId,onDocumentoSalva
       {p.signed_url&&<a href={p.signed_url} target="_blank" rel="noopener noreferrer" className="rounded border px-3 py-2 text-xs text-sky-700">Apri documento</a>}
       <button type="button" disabled={!!busy} onClick={()=>void execute(p,"save")} className="rounded border border-blue-600 bg-blue-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Salva / aggiorna</button>
       <button type="button" disabled={!!busy} onClick={()=>{setRequestFor(p);setRecipientEmail(p.email||"");setError("");setMessage("");}} className="rounded border border-sky-400 px-3 py-2 text-xs font-semibold text-sky-700 disabled:opacity-50">Richiedi documento</button>
+      {p.documento?.allegato_documento&&<button type="button" disabled={!!busy} onClick={()=>{setRemoveFor(p);setError("");setMessage("");}} className="rounded border border-red-500 px-3 py-2 text-xs font-semibold text-red-700 disabled:opacity-50">Rimuovi documento</button>}
      </div>
     </div>;
    })}</div>}
+  {removeFor&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="presentation">
+    <div role="alertdialog" aria-modal="true" aria-labelledby="remove-document-title" className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl">
+      <h3 id="remove-document-title" className="text-lg font-bold text-slate-900">Rimuovere il documento?</h3>
+      <p className="mt-3 text-sm text-slate-700">Stai rimuovendo il documento attivo di <strong>{removeFor.nome}</strong>. Non comparira piu nei Fascicoli AML e la relativa scadenza verra disattivata.</p>
+      <p className="mt-2 text-xs text-slate-500">Il file originale restera conservato per tracciabilita. Potrai caricare un documento corretto successivamente.</p>
+      {error&&<p role="alert" className="mt-3 rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+      <div className="mt-5 flex justify-end gap-2">
+        <button type="button" disabled={!!busy} onClick={()=>{setRemoveFor(null);setError("");}} className="rounded border border-slate-300 px-4 py-2 text-sm">Annulla</button>
+        <button type="button" disabled={!!busy} onClick={()=>void execute(removeFor,"remove")} className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy?"Rimozione...":"Conferma rimozione"}</button>
+      </div>
+    </div>
+  </div>}
   {requestFor&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="presentation">
     <div role="dialog" aria-modal="true" aria-labelledby="request-doc-title" className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl">
       <h3 id="request-doc-title" className="text-lg font-bold text-slate-900">Richiesta documento d'identità</h3>
