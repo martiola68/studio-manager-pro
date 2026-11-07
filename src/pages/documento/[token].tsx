@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { getSupabaseClient } from "@/lib/supabaseClient";
 
 type PublicDocumentoFormState = {
   id: string;
@@ -158,131 +157,14 @@ export default function PublicDocumentoPage() {
       setOkMsg("");
 
       try {
-     const {
-  data: documento,
-  error: documentoError,
-} = await supabase
-  .from("tbclienti_documenti_aml")
-  .select(`
-    id,
-    studio_id,
-    soggetto_cliente_id,
-    tipo_documento,
-    numero_documento,
-    scadenza_documento,
-    allegato_documento,
-    public_doc_token,
-    public_doc_enabled,
-    public_doc_opened_at,
-    public_doc_submitted_at
-  `)
-  .eq("public_doc_token", token)
-  .eq("attivo", true)
-  .maybeSingle();
-
-if (documentoError) {
-  console.error(
-    "Errore caricamento documento AML:",
-    documentoError
-  );
-
-  if (!cancelled) {
-    setNotFound(true);
-  }
-
-  return;
-}
-
-if (!documento) {
-  if (!cancelled) {
-    setNotFound(true);
-  }
-
-  return;
-}
-
-if (!documento.public_doc_enabled) {
-  if (!cancelled) {
-    setDisabledLink(true);
-  }
-
-  return;
-}
-
-/*
- * Recuperiamo i dati anagrafici dalla
- * fonte unica tbclienti.
- */
-const {
-  data: soggetto,
-  error: soggettoError,
-} = await supabase
-  .from("tbclienti")
-  .select(`
-    id,
-    ragione_sociale,
-    citta,
-    indirizzo,
-    cap
-  `)
-  .eq(
-    "id",
-    documento.soggetto_cliente_id
-  )
-  .eq(
-    "studio_id",
-    documento.studio_id
-  )
-  .maybeSingle();
-
-if (soggettoError) {
-  console.error(
-    "Errore caricamento soggetto:",
-    soggettoError
-  );
-
-  if (!cancelled) {
-    setNotFound(true);
-  }
-
-  return;
-}
-
-if (!soggetto) {
-  if (!cancelled) {
-    setNotFound(true);
-  }
-
-  return;
-}
-
-const mapped = mapRowToForm(
-  documento,
-  soggetto
-);
-
-if (cancelled) return;
-
-setForm(mapped);
-
-if (mapped.public_doc_submitted_at) {
-  setCompleted(true);
-}
-
-/*
- * Registriamo l'apertura direttamente
- * sul documento AML.
- */
-if (!mapped.public_doc_opened_at) {
-  await supabase
-    .from("tbclienti_documenti_aml")
-    .update({
-      public_doc_opened_at:
-        new Date().toISOString(),
-    })
-    .eq("id", documento.id)
-    .eq("public_doc_token", token);
-}
+      const response = await fetch("/api/public/documento/lookup?token="+encodeURIComponent(token), { cache:"no-store" });
+      const data = await response.json().catch(()=>({}));
+      if(response.status===410){ if(!cancelled)setDisabledLink(true);return; }
+      if(!response.ok||!data.ok){ if(!cancelled)setNotFound(true);return; }
+      const mapped=mapRowToForm(data.documento,data.soggetto);
+      if(cancelled)return;
+      setForm(mapped);
+      if(mapped.public_doc_submitted_at)setCompleted(true);
       } catch (err) {
         console.error("Errore imprevisto pagina pubblica documento:", err);
         if (!cancelled) setNotFound(true);
