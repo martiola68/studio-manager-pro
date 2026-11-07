@@ -140,6 +140,7 @@ export default function FascicoloDocumentiPage() {
   const [loading, setLoading] = useState(true);
   const [clienteNome, setClienteNome] = useState("Cliente");
   const [clienteIdPratica, setClienteIdPratica] = useState("");
+  const [statoDocumentoAmministratore, setStatoDocumentoAmministratore] = useState("");
   const [prestazionePratica, setPrestazionePratica] = useState("");
   
   const [clienteIsSocieta, setClienteIsSocieta] = useState(false);
@@ -980,7 +981,7 @@ useEffect(() => {
 ) : null}
         </div>
       )}</div></details>
-      {clienteIdPratica && typeof pratica_id === "string" && <details className="group mb-5 rounded-lg border border-sky-200 bg-white"><summary className="flex cursor-pointer list-none items-center justify-between p-4 font-semibold [&::-webkit-details-marker]:hidden"><span>Documento d'identità – Amministratore associato</span><span className="text-lg text-sky-700 group-open:rotate-180" aria-hidden="true">⌄</span></summary><div className="border-t border-sky-100 p-3"><AmlOrganiDocumenti clienteId={clienteIdPratica} praticaId={pratica_id} onDocumentoSalvato={async()=>{syncedRef.current=null;await loadData();}} /></div></details>}
+      {clienteIdPratica && typeof pratica_id === "string" && <details className="group mb-5 rounded-lg border border-sky-200 bg-white"><summary className="flex cursor-pointer list-none items-center justify-between p-4 font-semibold [&::-webkit-details-marker]:hidden"><span className="flex flex-wrap items-center gap-2">Documento d'identità – Amministratore associato{statoDocumentoAmministratore&&<span className={"rounded-full px-2 py-0.5 text-xs font-semibold "+(statoDocumentoAmministratore==="Scaduto"?"bg-red-100 text-red-700":statoDocumentoAmministratore==="In scadenza"?"bg-amber-100 text-amber-800":statoDocumentoAmministratore==="Valido"?"bg-emerald-100 text-emerald-700":"bg-slate-100 text-slate-600")}>{statoDocumentoAmministratore}</span>}</span><span className="text-lg text-sky-700 group-open:rotate-180" aria-hidden="true">⌄</span></summary><div className="border-t border-sky-100 p-3"><AmlOrganiDocumenti clienteId={clienteIdPratica} praticaId={pratica_id} onStatoChange={setStatoDocumentoAmministratore} onDocumentoSalvato={async()=>{syncedRef.current=null;await loadData();}} /></div></details>}
 
       {typeof pratica_id === "string" && (
         <div className="mb-4 flex flex-wrap gap-2">
