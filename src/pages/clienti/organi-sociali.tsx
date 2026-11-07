@@ -2103,7 +2103,7 @@ return (
         <button
           type="button"
           onClick={() => router.push(ritornoPratica ? `/pratiche/${encodeURIComponent(ritornoPratica)}` : "/clienti")}
-          style={secondaryButton}
+          style={{ ...secondaryButton, width: "auto", height: 34, minHeight: 34, padding: "5px 12px", fontSize: 12, lineHeight: "20px", alignSelf: "flex-start", whiteSpace: "nowrap" }}
         >
           {ritornoPratica ? "← Torna alla pratica" : "← Torna clienti"}
         </button>

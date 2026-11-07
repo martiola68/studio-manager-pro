@@ -96,7 +96,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const isMasterGraficaControlloGestione = router.pathname === "/controllo-gestione" || router.pathname.startsWith("/controllo-gestione/");
   const isMasterGraficaContenzioso = router.pathname === "/contenzioso" || router.pathname.startsWith("/contenzioso/");
   const isContenziosoScrollPage = CONTENZIOSO_SCROLL_ROUTES.has(router.pathname);
-  const isMasterGraficaAntiriciclaggio = router.pathname === "/antiriciclaggio" || router.pathname === "/antiriciclaggio/fascicolo-documenti";
+  const isMasterGraficaAntiriciclaggio = router.pathname === "/antiriciclaggio/fascicolo-documenti";
   const isAntiriciclaggioElenco = router.pathname === "/antiriciclaggio";
   const isAntiriciclaggioFascicolo = router.pathname === "/antiriciclaggio/fascicolo-documenti";
   const isMasterGraficaAnagrafiche = ANAGRAFICHE_MASTER_ROUTES.has(router.pathname);

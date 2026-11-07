@@ -130,7 +130,7 @@ export default function AmlDashboardPage({smpMode=false}:{smpMode?:boolean} = {}
     <ShieldCheck className="mx-auto mb-4 h-10 w-10 text-red-600" /><h1 className="text-xl font-bold">Modulo AML non abilitato</h1>
     <p className="mt-2 text-slate-600">L'accesso richiede una licenza AML attiva per questo studio.</p>
   </div>;
-  return <div className="space-y-5">
+  return <div className={"space-y-5 " + (smpMode ? "pt-4" : "")}>
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div><h1 className="text-3xl font-bold tracking-tight text-slate-900">Cruscotto AML</h1><p className="mt-1 text-sm text-slate-500">Panoramica antiriciclaggio · dati del gestionale Studio Manager Pro</p></div>
       <div className="flex flex-wrap gap-2">
