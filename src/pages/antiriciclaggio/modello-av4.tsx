@@ -894,7 +894,21 @@ async function importaAmministratoreDaCliente() {
   }
 }
 
-        if (!existingRow && av1IdFromQuery) {
+        // Le pratiche precedenti possono non avere il puntatore av4_corrente_id.
+        // Recupera il modello dalla pratica, mai dal solo cliente.
+        if (!existingRow && praticaIdFromQuery) {
+          const { data, error } = await supabase
+            .from("tbAV4")
+            .select("*")
+            .eq("pratica_id", praticaIdFromQuery)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (error) throw error;
+          existingRow = data || null;
+        }
+
+        if (!existingRow && av1IdFromQuery && !praticaIdFromQuery) {
           const { data, error } = await supabase
             .from("tbAV4")
             .select("*")
@@ -1950,7 +1964,24 @@ invia_altra_email: !!form.invia_altra_email,
 
     let savedId: string | null = av4Id;
 
-    if (av4Id) {
+    // Una pratica AML deve possedere il proprio AV4 dall'apertura.
+    // Se non si conosce l'ID, impedire qualsiasi secondo inserimento.
+    if (!savedId && form.pratica_id) {
+      const { data: existing, error: findError } = await supabase
+        .from("tbAV4")
+        .select("id")
+        .eq("pratica_id", form.pratica_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (findError) throw findError;
+      if (existing?.id) {
+        throw new Error("Un AV4 esiste già: riapri il modello per caricare il record corrente. Nessun duplicato creato.");
+      }
+      throw new Error("AV4 iniziale mancante: verifica la pratica prima di salvare. Nessuna bozza creata.");
+    }
+
+    if (savedId) {
       // Rileggi lo stato dal database prima di ogni salvataggio: il modulo
       // aperto nello studio puo essere precedente alla compilazione pubblica.
       const { data: persisted, error: readError } = await supabase

@@ -199,6 +199,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (av4Error || !av4Data?.id) {
         throw av4Error || new Error("Errore creazione AV4");
       }
+
+      // Collega immediatamente alla pratica l'AV4 iniziale.
+      // Il form deve aggiornare questo record e non crearne un secondo.
+      const { data: praticaCollegata, error: collegamentoError } = await supabaseAdmin
+        .from("tbPraticheAML")
+        .update({
+          av1_id: av1Id,
+          av1_corrente_id: av1Id,
+          av2_id: av2Data.id,
+          av2_corrente_id: av2Data.id,
+          av4_id: av4Data.id,
+          av4_corrente_id: av4Data.id,
+        })
+        .eq("id", praticaId)
+        .eq("studio_id", studioId)
+        .select("id")
+        .single();
+      if (collegamentoError || !praticaCollegata?.id) {
+        throw collegamentoError || new Error("Impossibile collegare AV1/AV2/AV4 alla pratica AML");
+      }
     } catch (childError) {
       await supabaseAdmin.from("tbPraticheAML").delete().eq("id", praticaId);
       throw childError;
