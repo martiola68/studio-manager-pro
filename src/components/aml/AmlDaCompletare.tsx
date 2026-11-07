@@ -31,15 +31,80 @@ export default function AmlDaCompletare(){
  const [filter,setFilter]=useState("tutti");
  const [currentSocieta,setCurrentSocieta]=useState("");
  const [needsAccess,setNeedsAccess]=useState(false);
+ const [societaOptions,setSocietaOptions]=useState<{id:string;Denominazione:string;antiriciclaggio_enabled:boolean}[]>([]);
+ const [selectedId,setSelectedId]=useState("");
+ const [unlockedId,setUnlockedId]=useState("");
+ const [password,setPassword]=useState("");
+ const [passwordBusy,setPasswordBusy]=useState(false);
+ const [passwordError,setPasswordError]=useState("");
+ const [optionsError,setOptionsError]=useState("");
+ const [optionsLoaded,setOptionsLoaded]=useState(false);
  const allowed=!!studioId&&hasModule("aml");
+ const selectedSocieta=societaOptions.find(x=>x.id===selectedId);
+ const isUnlocked=!!selectedSocieta&&(!selectedSocieta.antiriciclaggio_enabled||unlockedId===selectedId);
  useEffect(()=>{
-   if(!ready||licenseLoading||!allowed||!studioId||!session?.access_token){setLoading(false);return;}
+   if(!ready||licenseLoading||!allowed||!studioId)return;
+   let active=true;
+   setOptionsLoaded(false);setOptionsError("");
+   const load=async()=>{
+     try{
+       const supabase=getSupabaseClient() as any;
+       const {data,error}=await supabase.from("tbRespAVSocieta")
+         .select("id,Denominazione,antiriciclaggio_enabled").eq("studio_id",studioId)
+         .order("Denominazione",{ascending:true});
+       if(error)throw error;
+       if(!active)return;
+       const items=(data||[]) as {id:string;Denominazione:string;antiriciclaggio_enabled:boolean}[];
+       setSocietaOptions(items);
+       const remembered=typeof window!=="undefined"?sessionStorage.getItem("antiriciclaggio_selected_societa_id")||"":"";
+       const authorized=typeof window!=="undefined"?sessionStorage.getItem("antiriciclaggio_unlocked_societa_id")||"":"";
+       setSelectedId(items.some(x=>x.id===remembered)?remembered:"");
+       setUnlockedId(authorized);
+     }catch(e){if(active)setOptionsError(e instanceof Error?e.message:"Errore nel caricamento dei soggetti responsabili");}
+     finally{if(active)setOptionsLoaded(true);}
+   };
+   void load();
+   return()=>{active=false;};
+ },[ready,licenseLoading,allowed,studioId]);
+ const selectSocieta=(id:string)=>{
+   setSelectedId(id);setPassword("");setPasswordError("");
+   setTasks([]);setCurrentSocieta("");setNeedsAccess(!!id);
+   if(typeof window!=="undefined"){
+     if(id)sessionStorage.setItem("antiriciclaggio_selected_societa_id",id);
+     else sessionStorage.removeItem("antiriciclaggio_selected_societa_id");
+     if(unlockedId!==id){
+       sessionStorage.removeItem("antiriciclaggio_unlocked_societa_id");
+       sessionStorage.removeItem("antiriciclaggio_av7_access_proof");
+       setUnlockedId("");
+     }
+   }
+ };
+ const unlockSocieta=async()=>{
+   if(!selectedSocieta||!password.trim())return setPasswordError("Inserisci la password del soggetto responsabile.");
+   setPasswordBusy(true);setPasswordError("");
+   try{
+     const {data:{session:latestSession}}=await (getSupabaseClient() as any).auth.getSession();
+     if(!latestSession?.access_token)throw new Error("Sessione scaduta: accedi nuovamente.");
+     const response=await fetch("/api/antiriciclaggio/verify-societa-password",{
+       method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+latestSession.access_token},
+       body:JSON.stringify({societaId:selectedSocieta.id,password:password.trim()})
+     });
+     const result=await response.json().catch(()=>({}));
+     if(!response.ok||!result?.ok)throw new Error(result?.error||"Password non valida");
+     sessionStorage.setItem("antiriciclaggio_unlocked_societa_id",selectedSocieta.id);
+     sessionStorage.setItem("antiriciclaggio_selected_societa_id",selectedSocieta.id);
+     if(result.av7AccessProof)sessionStorage.setItem("antiriciclaggio_av7_access_proof",result.av7AccessProof);
+     setUnlockedId(selectedSocieta.id);setPassword("");
+   }catch(e){setPasswordError(e instanceof Error?e.message:"Errore nella verifica");}
+   finally{setPasswordBusy(false);}
+ };
+ useEffect(()=>{
+   if(!ready||licenseLoading||!allowed||!studioId||!session?.access_token||!optionsLoaded){setLoading(false);return;}
    let active=true;
    const load=async()=>{
     setLoading(true);setError("");setNotice("");setTasks([]);setCurrentSocieta("");setNeedsAccess(false);
     try{
      const supabase=getSupabaseClient() as any;
-     // Use exactly the responsible entity chosen and unlocked in Elenco AML.
      const selectedId=typeof window==="undefined"?"":sessionStorage.getItem("antiriciclaggio_selected_societa_id")||"";
      const unlockedId=typeof window==="undefined"?"":sessionStorage.getItem("antiriciclaggio_unlocked_societa_id")||"";
      if(!selectedId){if(active)setNeedsAccess(true);return;}
@@ -137,7 +202,7 @@ export default function AmlDaCompletare(){
    };
    void load();
    return ()=>{active=false;};
- },[ready,licenseLoading,allowed,studioId,session?.access_token,refresh]);
+ },[ready,licenseLoading,allowed,studioId,session?.access_token,optionsLoaded,selectedId,unlockedId,refresh]);
  const shown=useMemo(()=>filter==="tutti"?tasks:tasks.filter(t=>t.urgenza===filter),[tasks,filter]);
  const count=(x:Task["urgenza"])=>tasks.filter(t=>t.urgenza===x).length;
  if(!ready||licenseLoading)return <p className="p-5 text-slate-500">Verifica accesso AML...</p>;
@@ -147,12 +212,33 @@ export default function AmlDaCompletare(){
      <div><h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900"><ClipboardList className="h-7 w-7 text-sky-700"/> Centro adempimenti</h1><p className="mt-1 text-sm text-slate-500">Attività da completare, per cliente e prestazione · sola lettura</p></div>
      <div className="flex gap-2"><Link href="/aml" className="rounded-xl border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-sky-700">Cruscotto</Link><button type="button" onClick={()=>setRefresh(x=>x+1)} disabled={loading} className="flex items-center gap-2 rounded-xl bg-[#0369a1] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><RefreshCw className={"h-4 w-4 "+(loading?"animate-spin":"")}/> Aggiorna</button></div>
    </div>
+   <div className="rounded-xl border border-sky-200 bg-white p-4">
+     <label htmlFor="aml-soggetto-centro" className="mb-2 block text-sm font-semibold text-slate-800">Soggetto responsabile AML</label>
+     <select id="aml-soggetto-centro" value={selectedId} onChange={e=>selectSocieta(e.target.value)}
+       disabled={!optionsLoaded||passwordBusy}
+       className="w-full max-w-xl rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm text-slate-900">
+       <option value="">Seleziona il soggetto responsabile</option>
+       {societaOptions.map(item=><option key={item.id} value={item.id}>{item.Denominazione}</option>)}
+     </select>
+     {optionsError&&<p className="mt-2 text-sm text-red-700" role="alert">{optionsError}</p>}
+     {selectedSocieta?.antiriciclaggio_enabled&&!isUnlocked&&<div className="mt-3 max-w-xl rounded-lg border border-amber-200 bg-amber-50 p-3">
+       <label htmlFor="aml-centro-password" className="mb-1 block text-sm font-semibold text-amber-900">Password del soggetto responsabile</label>
+       <form onSubmit={e=>{e.preventDefault();void unlockSocieta();}} className="flex flex-wrap gap-2">
+         <input id="aml-centro-password" type="password" autoComplete="off" value={password}
+           onChange={e=>setPassword(e.target.value)} className="min-w-44 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
+         <button type="submit" disabled={passwordBusy||!password.trim()} className="rounded-lg bg-[#0369a1] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+           {passwordBusy?"Verifica...":"Sblocca"}
+         </button>
+       </form>
+       {passwordError&&<p role="alert" className="mt-2 text-sm text-red-700">{passwordError}</p>}
+     </div>}
+   </div>
    {currentSocieta&&<div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-200 bg-white p-4">
       <div><div className="text-xs text-slate-500">Soggetto responsabile attivo</div><div className="font-bold text-sky-800">{currentSocieta}</div><div className="text-xs text-slate-500">Sono visualizzate esclusivamente le pratiche di questo soggetto.</div></div>
       <Link href="/antiriciclaggio" className="rounded-lg border border-sky-300 px-3 py-2 text-sm font-semibold text-sky-700">Cambia soggetto dall'Elenco AML</Link>
    </div>}
    {needsAccess&&<div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-     Seleziona e, se richiesto, sblocca un soggetto responsabile nell'<Link href="/antiriciclaggio" className="font-semibold underline">Elenco Antiriciclaggio</Link> prima di visualizzare gli adempimenti. Le due utenze restano separate.
+     Seleziona il soggetto direttamente dal menu qui sopra e, se richiesto, inserisci la password. Le pratiche delle due utenze restano separate.
    </div>}
    {!error&&!needsAccess&&<div className="grid grid-cols-2 gap-3 md:grid-cols-4">
     {([{key:"scaduto",label:"Scadute",value:count("scaduto"),color:"text-red-700"},{key:"da-fare",label:"Da fare",value:count("da-fare"),color:"text-amber-700"},{key:"verificare",label:"Documenti da verificare",value:count("verificare"),color:"text-sky-700"},{key:"attesa",label:"In attesa",value:count("attesa"),color:"text-slate-700"}] as const).map(x=><button key={x.key} type="button" onClick={()=>setFilter(filter===x.key?"tutti":x.key)} aria-pressed={filter===x.key} className={"rounded-xl border bg-white p-4 text-left shadow-sm "+(filter===x.key?"border-sky-600 ring-1 ring-sky-600":"border-slate-200")}><span className={"block text-3xl font-bold "+x.color}>{loading?"—":x.value}</span><span className="text-xs font-semibold text-slate-600">{x.label}</span></button>)}
