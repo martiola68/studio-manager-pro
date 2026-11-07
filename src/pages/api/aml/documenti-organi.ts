@@ -133,7 +133,7 @@ export default async function handler(req:NextApiRequest,res:NextApiResponse){
     if(person.error)throw person.error;
     const emailDestinatario=str(req.body?.email_destinatario)||str(person.data.email);
     if(!emailDestinatario)return res.status(400).json({error:"Inserisci l'indirizzo email a cui inviare la richiesta."});
-    if(emailDestinatario.length>254||!^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(emailDestinatario))return res.status(400).json({error:"Indirizzo email del destinatario non valido."});
+    if(emailDestinatario.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailDestinatario))return res.status(400).json({error:"Indirizzo email del destinatario non valido."});
     await sendRichiestaDocumentoRappresentante({documentoAmlId:doc.id,studioId,nomeDestinatario:str(person.data.ragione_sociale)||"Gentile cliente",email:emailDestinatario,microsoftConnectionId:str(doc.microsoft_connection_id)||"utente-comunicazioni",clienteId});
     return res.status(200).json({ok:true});
   }

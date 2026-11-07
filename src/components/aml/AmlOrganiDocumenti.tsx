@@ -47,7 +47,7 @@ export default function AmlOrganiDocumenti({clienteId,praticaId,onDocumentoSalva
   try{
    if(action==="request"){
      const email=recipientEmail.trim();
-     if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))throw new Error("Inserisci un indirizzo email valido.");
+     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new Error("Inserisci un indirizzo email valido.");
      await request("POST",{action,soggetto_cliente_id:id,email_destinatario:email});
      setRequestFor(null);
      setRecipientEmail("");
@@ -117,7 +117,7 @@ export default function AmlOrganiDocumenti({clienteId,praticaId,onDocumentoSalva
       {error&&<p role="alert" className="mt-3 rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>}
       <div className="mt-5 flex flex-wrap justify-end gap-2">
        <button type="button" disabled={!!busy} onClick={()=>{setRequestFor(null);setError("");}} className="rounded border border-slate-300 px-4 py-2 text-sm">Annulla</button>
-       <button type="button" disabled={!!busy||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipientEmail.trim())} onClick={()=>void execute(requestFor,"request")} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy?"Invio in corso...":"Conferma e invia email"}</button>
+       <button type="button" disabled={!!busy||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail.trim())} onClick={()=>void execute(requestFor,"request")} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy?"Invio in corso...":"Conferma e invia email"}</button>
       </div>
     </div>
   </div>}
