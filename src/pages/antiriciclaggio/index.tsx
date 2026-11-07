@@ -695,6 +695,15 @@ export default function AntiriciclaggioPage() {
     router.push(selectedSocieta?.id ? `/antiriciclaggio/pratiche/nuovo?societa_id=${selectedSocieta.id}` : "/antiriciclaggio/pratiche/nuovo");
   };
 
+  const handleAggiungiPrestazione = (row: AV1Row) => {
+    if (!canAccessAntiriciclaggio || !row.cliente_id || !row.societa_id) return;
+    const params = new URLSearchParams({
+      cliente_id: row.cliente_id,
+      societa_id: row.societa_id,
+    });
+    void router.push(`/antiriciclaggio/pratiche/nuovo?${params.toString()}`);
+  };
+
   const handleApriAV1 = (row: AV1Row) => {
     if (!canAccessAntiriciclaggio) return;
     if (row.id) return void router.push(`/antiriciclaggio/modello-av1?id=${row.id}`);
