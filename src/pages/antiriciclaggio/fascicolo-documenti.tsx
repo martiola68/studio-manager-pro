@@ -943,7 +943,7 @@ useEffect(() => {
         </div>
       ) : null}
 
-        {loading ? null : fascicoloCompleto ? (
+        <details className="group mb-4 rounded-lg border border-amber-200 bg-amber-50 text-sm text-amber-950"><summary className="flex cursor-pointer list-none items-center justify-between p-4 font-semibold [&::-webkit-details-marker]:hidden"><span>{loading?"Verifica fascicolo AML...":fascicoloCompleto?"Fascicolo AML completo":`Fascicolo AML incompleto · ${documentiMancanti.length} mancanti`}</span><span className="text-lg text-amber-700 group-open:rotate-180" aria-hidden="true">⌄</span></summary><div className="border-t border-amber-200 px-3 pb-1 pt-3">{loading ? null : fascicoloCompleto ? (
         <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
           <div className="font-semibold">Fascicolo AML completo</div>
           <div className="mt-1">
@@ -972,12 +972,11 @@ useEffect(() => {
   </div>
 ) : null}
         </div>
-      )}
-
-      {clienteIdPratica && typeof pratica_id==="string" && <AmlOrganiDocumenti clienteId={clienteIdPratica} praticaId={pratica_id} onDocumentoSalvato={async()=>{syncedRef.current=null;await loadData();}} />}
+      )}</div></details>
+      {clienteIdPratica && typeof pratica_id==="string" && <details className="group mb-5 rounded-lg border border-sky-200 bg-white"><summary className="flex cursor-pointer list-none items-center justify-between p-4 font-semibold [&::-webkit-details-marker]:hidden"><span>Documento d'identità – Amministratore associato</span><span className="text-lg text-sky-700 group-open:rotate-180" aria-hidden="true">⌄</span></summary><div className="border-t border-sky-100 p-3"><AmlOrganiDocumenti clienteId={clienteIdPratica} praticaId={pratica_id} onDocumentoSalvato={async()=>{syncedRef.current=null;await loadData();}} /></div></details>}
       {typeof pratica_id==="string" && (versioniAV1.length>0||versioniAV4.length>0) && (
- <section className="mb-5 rounded-lg border border-sky-200 bg-white p-4">
-  <h2 className="mb-3 font-semibold">Storico moduli della prestazione selezionata</h2>
+ <details className="group mb-5 rounded-lg border border-sky-200 bg-white p-4">
+  <summary className="mb-3 flex cursor-pointer list-none items-center justify-between font-semibold [&::-webkit-details-marker]:hidden"><span>Storico moduli della prestazione selezionata · AV1 ({versioniAV1.length}) / AV4 ({versioniAV4.length})</span><span className="text-lg text-sky-700 group-open:rotate-180" aria-hidden="true">⌄</span></summary><div className="border-t border-sky-100 pt-3">
   <div className="grid gap-4 md:grid-cols-2">
    <div><h3 className="mb-2 text-sm font-bold">Versioni AV1 ({versioniAV1.length})</h3>
    {versioniAV1.map((v,i)=><div key={v.id} className="flex justify-between items-center gap-3 border-b py-2 text-sm">
@@ -996,7 +995,7 @@ useEffect(() => {
      onClick={()=>void router.push(`/antiriciclaggio/modello-av4?id=${encodeURIComponent(String(v.id))}&pratica_id=${encodeURIComponent(pratica_id)}&origine=fascicolo`)}>Apri AV4</button>
    </div>)}</div>
   </div>
- </section>
+ </div></details>
 )}
 
       {typeof pratica_id === "string" && (
