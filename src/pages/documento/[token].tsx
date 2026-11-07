@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 type PublicDocumentoFormState = {
   id: string;
