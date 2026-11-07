@@ -79,7 +79,7 @@ export default function AmlOrganiDocumenti({clienteId,praticaId}:{clienteId:stri
     return <div key={p.soggetto_cliente_id} className="rounded-lg border border-slate-200 p-3">
      <div className="mb-3 flex flex-wrap items-center gap-2"><strong className="text-sm">{p.nome}</strong><span className={"rounded-full px-2 py-0.5 text-xs font-semibold "+st.cls}>{st.label}</span>{p.email&&<span className="text-xs text-slate-500">{p.email}</span>}</div>
      <div className="grid gap-3 md:grid-cols-3">
-      <label className="text-xs text-slate-600">Tipo documento<select value={e.tipo_documento} onChange={v=>update(p.soggetto_cliente_id,"tipo_documento",v.target.value)} className="mt-1 w-full rounded border p-2 text-sm"><option value="">Seleziona</option><option>Carta d'identità</option><option>Passaporto</option><option>Patente</option></select></label>
+      <label className="text-xs text-slate-600">Tipo documento<select value={e.tipo_documento} onChange={v=>update(p.soggetto_cliente_id,"tipo_documento",v.target.value)} className="mt-1 w-full rounded border p-2 text-sm"><option value="">Seleziona</option><option value="Carta di identità">Carta di identità</option><option>Passaporto</option><option>Patente</option></select></label>
       <label className="text-xs text-slate-600">Numero documento<input value={e.numero_documento} onChange={v=>update(p.soggetto_cliente_id,"numero_documento",v.target.value)} className="mt-1 w-full rounded border p-2 text-sm" /></label>
       <label className="text-xs text-slate-600">Data scadenza<input type="date" value={e.scadenza_documento} onChange={v=>update(p.soggetto_cliente_id,"scadenza_documento",v.target.value)} className="mt-1 w-full rounded border p-2 text-sm"/></label>
      </div>
