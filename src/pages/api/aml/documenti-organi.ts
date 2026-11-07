@@ -3,6 +3,15 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendRichiestaDocumentoRappresentante } from "@/services/rappresentantiDocumentiService";
 const db=supabaseAdmin as any;
 const str=(v:unknown)=>String(v??"").trim();
+const normalizeTipoDocumento=(v:unknown):string|null=>{
+ const raw=str(v);
+ if(!raw)return null;
+ const simplified=raw.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[’‘\u0060]/g,"'").replace(/\s+/g," ").trim();
+ if(["carta d'identita","carta di identita","carta identita"].includes(simplified))return "Carta di identità";
+ if(simplified==="passaporto")return "Passaporto";
+ if(simplified==="patente")return "Patente";
+ return null;
+};
 function alertTime(date:string){const d=new Date(date+"T08:00:00Z");d.setUTCDate(d.getUTCDate()-90);return d.getTime()>Date.now()?d.toISOString():new Date().toISOString()}
 export default async function handler(req:NextApiRequest,res:NextApiResponse){
  if(!["GET","POST"].includes(req.method||""))return res.status(405).json({error:"Metodo non consentito"});
@@ -85,7 +94,10 @@ export default async function handler(req:NextApiRequest,res:NextApiResponse){
     return res.status(200).json({ok:true});
   }
   if(action!=="save")return res.status(400).json({error:"Azione non consentita"});
-  const tipo=str(req.body?.tipo_documento),numero=str(req.body?.numero_documento),scadenza=str(req.body?.scadenza_documento),file=str(req.body?.allegato_documento);
+  const rawTipo=str(req.body?.tipo_documento);
+  const tipo=normalizeTipoDocumento(rawTipo);
+  if(rawTipo&&!tipo)return res.status(400).json({error:"Tipo documento non consentito. Seleziona Carta di identità, Passaporto o Patente."});
+  const numero=str(req.body?.numero_documento),scadenza=str(req.body?.scadenza_documento),file=str(req.body?.allegato_documento);
   if(scadenza&&!/^\d{4}-\d{2}-\d{2}$/.test(scadenza))return res.status(400).json({error:"Data scadenza non valida"});
   if(file&&!file.startsWith(studioId+"/organi-documenti/"+soggettoId+"/"))return res.status(400).json({error:"Percorso documento non autorizzato"});
   const oldDate=str(doc?.scadenza_documento);

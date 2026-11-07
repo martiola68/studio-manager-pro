@@ -35,7 +35,7 @@ export default function AmlOrganiDocumenti({clienteId,praticaId}:{clienteId:stri
   try{
    const d=await request("GET");
    const rows:Person[]=d.items||[];setItems(rows);setNotice(String(d.notice||""));
-   setEdits(Object.fromEntries(rows.map(p=>[p.soggetto_cliente_id,{tipo_documento:p.documento?.tipo_documento||"",numero_documento:p.documento?.numero_documento||"",scadenza_documento:p.documento?.scadenza_documento||""}])));
+   setEdits(Object.fromEntries(rows.map(p=>[p.soggetto_cliente_id,{tipo_documento:p.documento?.tipo_documento==="Carta d'identità"?"Carta di identità":p.documento?.tipo_documento||"",numero_documento:p.documento?.numero_documento||"",scadenza_documento:p.documento?.scadenza_documento||""}])));
   }catch(e){setError(e instanceof Error?e.message:"Errore caricamento documenti");}finally{setLoading(false);}
  },[clienteId,request]);
  useEffect(()=>{void refresh();},[refresh]);
