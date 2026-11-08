@@ -135,7 +135,7 @@ export default function App({ Component, pageProps }: AppProps) {
     return () => { cancelled = true; };
   }, [router.isReady, router.pathname, isScadenzarioPage]);
 
-  const isPublicPage = router.pathname === "/login" || router.pathname === "/auth/callback" || router.pathname === "/404" || router.pathname === "/mobile/agenda" || router.asPath.startsWith("/documento/") || router.asPath.startsWith("/compilazione-av4/") || router.asPath.startsWith("/stampa/");
+  const isPublicPage = router.pathname === "/login" || router.pathname === "/aml/richiedi-attivazione" || router.pathname === "/auth/callback" || router.pathname === "/404" || router.pathname === "/mobile/agenda" || router.asPath.startsWith("/documento/") || router.asPath.startsWith("/compilazione-av4/") || router.asPath.startsWith("/stampa/");
 
   const pageClass = [
     isMasterGraficaPayroll ? "payroll-master-page !min-h-0 !overflow-hidden" : "",

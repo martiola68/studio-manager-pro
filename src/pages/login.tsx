@@ -162,6 +162,14 @@ export default function LoginPage() {
             </form>
           )}
 
+          {typeof window !== "undefined" && window.location.hostname.startsWith("aml.") && (
+            <div className="mt-4 rounded-xl border border-sky-200 bg-white p-3 text-center">
+              <p className="text-sm font-medium text-slate-800">Non hai ancora una licenza AML PRO?</p>
+              <a href="/aml/richiedi-attivazione" className="mt-1 inline-block text-sm font-semibold text-sky-700 hover:underline">
+                Richiedi attivazione AML PRO
+              </a>
+            </div>
+          )}
           <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-center">
             <p className="text-sm font-medium text-gray-800">Problemi con l’abbonamento?</p>
             <a
