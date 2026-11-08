@@ -11,13 +11,32 @@ export default function AmlGestioneAttivazioni(){
  const [error,setError]=useState("");
  const [notice,setNotice]=useState("");
  const [studioIds,setStudioIds]=useState<Record<string,string>>({});
+ const [onboarding,setOnboarding]=useState<Record<string,Record<string,string>>>({});
+ const [paymentChecks,setPaymentChecks]=useState<Record<string,boolean>>({});
+ const updateField=(id:string,key:string,val:string)=>setOnboarding(old=>({
+   ...old,[id]:{...(old[id]||{}),[key]:val}
+ }));
+ const provision=async(request:Request)=>{
+   if(!paymentChecks[request.id])return setError("Conferma prima di avere verificato l'incasso.");
+   if(!window.confirm("ATTENZIONE: stai creando uno studio reale, un amministratore e una LICENZA AML ATTIVA. Confermi l'incasso e l'attivazione?"))return;
+   setBusy(request.id);setError("");setNotice("");
+   try{
+     const data=await call("POST",{id:request.id,...(onboarding[request.id]||{}),
+       action:"provision",paymentConfirmed:"true",confirmation:"CONFERMO PAGAMENTO"});
+     setNotice(data.message||"Attivazione conclusa.");
+     await refresh();
+   }catch(e){setError(e instanceof Error?e.message:"Attivazione non riuscita");}
+   finally{setBusy("");}
+ };
+
  const [authorized,setAuthorized]=useState(false);
  const call=async(method:"GET"|"POST",body?:Record<string,string>)=>{
    const {data:{session}}=await getSupabaseClient().auth.getSession();
    if(!session?.access_token)throw new Error("Devi effettuare l'accesso.");
-   const response=await fetch("/api/aml/admin/richieste-attivazione",{
+   const endpoint=body?.action==="provision"?"/api/aml/admin/attiva-studio":"/api/aml/admin/richieste-attivazione";
+   const response=await fetch(endpoint,{
      method,headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},
-     ...(body?{body:JSON.stringify(body)}:{})});
+     ...(body?{body:JSON.stringify(body?.action==="provision"?{...body,paymentConfirmed:true}:body)}:{})});
    const result=await response.json().catch(()=>({}));
    if(!response.ok)throw new Error(result.error||"Operazione non riuscita");
    return result;
@@ -74,6 +93,30 @@ export default function AmlGestioneAttivazioni(){
      {(r.stato==="in_attesa"||r.stato==="in_valutazione")&&<button disabled={!!busy} onClick={()=>void apply(r.id,"status","rifiutata")} className="rounded-xl border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700">Rifiuta</button>}
     </div>
     {r.stato==="approvata"&&<div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+     <h3 className="font-bold text-amber-900">Crea studio AML PRO autonomo</h3>
+     <p className="mt-1 text-xs text-amber-900">Solo dopo pagamento verificato. Si crea un nuovo studio, l'amministratore e la licenza AML annuale; l'invito permette al cliente di impostare la propria password.</p>
+     <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+       {([
+         ["nome","Nome amministratore"],["cognome","Cognome amministratore"],
+         ["codiceFiscale","Codice fiscale dello studio"],["indirizzo","Indirizzo completo"],
+         ["cap","CAP"],["citta","Città"],["provincia","Provincia (sigla)"],
+         ["pec","PEC (facoltativa)"],["riferimentoPagamento","Riferimento pagamento verificato"]
+       ] as const).map(([field,label])=><label key={field} className="text-xs font-semibold text-slate-700">{label}
+         <input value={onboarding[r.id]?.[field]||""} onChange={e=>updateField(r.id,field,e.target.value)}
+           className="mt-1 w-full rounded-lg border border-sky-300 bg-white px-3 py-2 text-sm" placeholder={label}/>
+       </label>)}
+     </div>
+     <label className="mt-3 flex items-start gap-2 text-sm font-semibold text-amber-900">
+       <input type="checkbox" checked={paymentChecks[r.id]||false}
+         onChange={e=>setPaymentChecks(old=>({...old,[r.id]:e.target.checked}))} className="mt-1"/>
+       Ho verificato il pagamento e autorizzo la creazione della licenza AML attiva.
+     </label>
+     <button type="button" disabled={!!busy||!paymentChecks[r.id]||!["nome","cognome","codiceFiscale","indirizzo","cap","citta","provincia","riferimentoPagamento"].every(k=>(onboarding[r.id]?.[k]||"").trim())}
+       onClick={()=>void provision(r)}
+       className="mt-3 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">
+       Crea studio, amministratore e licenza AML
+     </button>
+     <div className="my-4 border-t border-amber-200"/>
      <h3 className="font-bold text-amber-900">Verifica attivazione effettiva</h3>
      <p className="mt-1 text-xs text-amber-900">Prima crea lo studio e l'account amministratore attraverso la procedura autorizzata, assegna la licenza AML attiva e verifica il pagamento. Questo controllo verifica studio, P. IVA, email amministratore e licenza già esistenti: non crea né abilita nulla.</p>
      <div className="mt-3 flex flex-wrap gap-2"><input className="min-w-56 flex-1 rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm" placeholder="ID studio già attivato (UUID)" value={studioIds[r.id]||""} onChange={e=>setStudioIds(v=>({...v,[r.id]:e.target.value}))}/>
