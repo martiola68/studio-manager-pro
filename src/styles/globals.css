@@ -497,3 +497,82 @@
 @media (prefers-reduced-motion: reduce) {
   .aml-pro-theme *, .aml-pro-theme *::before, .aml-pro-theme *::after {transition-duration: .01ms !important; animation-duration: .01ms !important;}
 }
+
+
+/* AML PRO — visual design of AV1, AV2, AV4 and AV7 only.
+   Existing form structure, buttons, print controls and validation stay untouched. */
+.aml-pro-theme .aml-pro-content .aml-pro-model-page {
+  border: 1px solid #98c4fa;
+  border-radius: 18px;
+  background: linear-gradient(150deg, #eaf3ff 0%, #f6faff 58%, #e5f0ff 100%) !important;
+  box-shadow: 0 12px 32px rgba(10,47,103,.11);
+}
+.aml-pro-theme .aml-pro-content .aml-pro-model-page.aml-form-shell > :first-child {
+  border-bottom: 4px solid #f57b22 !important;
+  background: linear-gradient(112deg, #ffffff 0%, #f7faff 62%, #eaf4ff 100%) !important;
+  box-shadow: 0 3px 13px rgba(10,60,125,.10);
+  flex-shrink: 0;
+}
+.aml-pro-theme .aml-pro-content .aml-pro-model-page.aml-form-shell > :first-child h1 {
+  color: #102856 !important;
+  border-left: 5px solid #f77b1f;
+  padding-left: 16px;
+  font-weight: 800;
+}
+.aml-pro-theme .aml-pro-content .aml-pro-model-page > .flex-1,
+.aml-pro-theme .aml-pro-content .aml-pro-model-page > .flex-1 > div {
+  background: linear-gradient(145deg, #e9f3ff, #f5f9ff 54%, #deecff) !important;
+}
+.aml-pro-theme .aml-pro-content .aml-pro-model-page [data-slot="card"],
+.aml-pro-theme .aml-pro-content .aml-pro-model-page .rounded-xl.border,
+.aml-pro-theme .aml-pro-content .aml-pro-model-page .border-sky-200.bg-slate-50 {
+  border: 1px solid #a4c9fb !important;
+  border-radius: 16px !important;
+  background: linear-gradient(145deg, #ffffff 0%, #f7fbff 66%, #edf5ff 100%) !important;
+  box-shadow: 0 5px 16px rgba(18,75,148,.085) !important;
+}
+.aml-pro-theme .aml-pro-content .aml-pro-model-page :is(input:not([type="checkbox"]):not([type="radio"]),textarea,select) {
+  border: 1px solid #c1d5f1;
+  border-radius: 9px;
+  background-color: #fff;
+}
+.aml-pro-theme .aml-pro-content .aml-pro-model-page .aml-form-shell button,
+.aml-pro-theme .aml-pro-content .aml-pro-model-page.aml-form-shell button:not([role="checkbox"]):not([data-aml-button-exclude="true"]) {
+  border: 1px solid #0b62b9 !important;
+  background: linear-gradient(120deg,#207fdb,#0755aa) !important;
+  border-radius: 11px !important;
+  box-shadow: 0 3px 10px rgba(9,81,161,.16) !important;
+}
+.aml-pro-theme .aml-pro-content .aml-pro-model-page.aml-form-shell button:not([role="checkbox"]):not([data-aml-button-exclude="true"]):hover {
+  background: linear-gradient(120deg,#136dc6,#083f85) !important;
+}
+.aml-pro-theme .aml-pro-content .aml-pro-av7-page > section {
+  border: 1px solid #a4c9fb !important;
+  border-radius: 17px !important;
+  background: linear-gradient(145deg,#fff,#f5faff 78%,#eaf4ff) !important;
+  box-shadow: 0 6px 18px rgba(12,67,139,.09);
+}
+.aml-pro-theme .aml-pro-content .aml-pro-av7-page > section > h2 {
+  border-left: 4px solid #f7771b;
+  padding-left: 12px;
+}
+.aml-pro-theme .aml-pro-content .aml-pro-av7-page > div:first-child h1 {
+  border-left: 5px solid #f7771b;
+  padding-left: 14px;
+  color: #102856;
+}
+.aml-pro-theme .aml-pro-content .aml-pro-av7-page input,
+.aml-pro-theme .aml-pro-content .aml-pro-av7-page select,
+.aml-pro-theme .aml-pro-content .aml-pro-av7-page textarea {
+  border-color: #afcff4;
+  background: #fff;
+  border-radius: 9px;
+}
+@media (max-width: 768px) {
+  .aml-pro-theme .aml-pro-content .aml-pro-model-page {
+    border-radius: 12px;
+  }
+  .aml-pro-theme .aml-pro-content .aml-pro-model-page.aml-form-shell > :first-child h1 {
+    padding-left: 9px;
+  }
+}

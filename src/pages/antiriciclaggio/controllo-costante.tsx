@@ -116,7 +116,7 @@ export default function ControlloCostanteAML() {
     finally { setBusy(false); }
   }
 
-  return <div className="mx-auto max-w-5xl space-y-6 p-6">
+  return <div className="aml-pro-av7-page mx-auto max-w-5xl space-y-6 p-6">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><h1 className="text-2xl font-bold text-slate-900">AV7 · Controllo costante</h1>
         <p className="text-sm text-slate-500">Rinnovo della verifica, senza duplicare cliente o pratica AML.</p></div>

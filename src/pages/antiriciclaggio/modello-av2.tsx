@@ -475,7 +475,7 @@ alert("Scheda AV2 salvata correttamente.");
   };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-slate-200/70">
+    <div className="aml-pro-model-page flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-slate-200/70">
       <FormStickyHeader
         title="Modello AV2"
         subtitle="Gestione documentazione e annotazioni professionista"
