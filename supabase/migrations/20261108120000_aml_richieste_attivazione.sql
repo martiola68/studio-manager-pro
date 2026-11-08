@@ -13,6 +13,9 @@ create table if not exists public.tbaml_richieste_attivazione (
     check (stato in ('in_attesa','in_valutazione','approvata','rifiutata','attivata')),
   privacy_accettata_il timestamptz not null,
   creata_il timestamptz not null default now(),
+  studio_id_attivato uuid,
+  gestita_da uuid,
+  gestita_il timestamptz,
   aggiornata_il timestamptz not null default now()
 );
 create unique index if not exists tbaml_richieste_attivazione_email_pending_uidx
