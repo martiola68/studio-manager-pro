@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="214" viewBox="0 0 700 214">
+<defs><linearGradient id="sky" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#daeaff"/><stop offset="1" stop-color="#f7faff"/></linearGradient><linearGradient id="stone" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset=".55" stop-color="#95c3f0"/><stop offset="1" stop-color="#2c6dac"/></linearGradient><linearGradient id="orange" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#ffa94a" stop-opacity=".18"/><stop offset=".58" stop-color="#ff7417" stop-opacity=".85"/><stop offset="1" stop-color="#f16b16" stop-opacity="0"/></linearGradient></defs>
+<path d="M5 197C140 73 237 112 330 140C436 171 533 53 700 17V214H5Z" fill="url(#sky)" opacity=".65"/>
+<path d="M10 184C181 95 291 189 424 118C522 67 592 65 700 16" fill="none" stroke="#c3dbfa" stroke-width="25" opacity=".6"/>
+<g opacity=".88" transform="translate(264 22)">
+<path d="M0 78L157 0L315 78Z" fill="#e4f3ff" stroke="#2b74b8" stroke-width="3"/>
+<path d="M25 80L157 16L285 80Z" fill="#aacff2" stroke="#2877ba" stroke-width="2"/>
+<rect x="21" y="82" width="272" height="12" fill="#7baee0" stroke="#2967ab"/>
+<g fill="url(#stone)" stroke="#3e88cc" stroke-width="2">
+<rect x="44" y="97" width="28" height="83"/><rect x="96" y="97" width="28" height="83"/><rect x="148" y="97" width="28" height="83"/><rect x="200" y="97" width="28" height="83"/><rect x="252" y="97" width="28" height="83"/>
+</g>
+<g fill="#b5d9fa" stroke="#347bb7" stroke-width="2">
+<rect x="37" y="93" width="42" height="10"/><rect x="89" y="93" width="42" height="10"/><rect x="141" y="93" width="42" height="10"/><rect x="193" y="93" width="42" height="10"/><rect x="245" y="93" width="42" height="10"/>
+</g><rect x="14" y="176" width="287" height="9" fill="#6fa7dc"/><rect x="3" y="185" width="311" height="10" fill="#a5cbed"/><rect x="-8" y="195" width="332" height="10" fill="#cce2f6"/></g>
+<path d="M-10 188C116 117 206 136 307 156C418 175 500 150 626 112C661 101 682 99 715 99" fill="none" stroke="url(#orange)" stroke-width="13" opacity=".95"/>
+<path d="M-10 212C146 143 204 152 313 180C405 202 527 179 713 114" fill="none" stroke="#95cbff" stroke-width="8" opacity=".75"/>
+</svg>

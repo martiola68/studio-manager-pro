@@ -41,7 +41,7 @@ function StatCard({ label, value, detail, icon: Icon, tone, href }: {
     blue: "bg-blue-50 text-blue-600", green: "bg-emerald-50 text-emerald-600",
     amber: "bg-amber-50 text-amber-600", red: "bg-red-50 text-red-600",
   };
-  return <Link href={href} className="group flex min-w-0 items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+  return <Link href={href} className="aml-pro-stat-card group flex min-w-0 items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
     <span className={"flex h-14 w-14 shrink-0 items-center justify-center rounded-xl " + tones[tone]}><Icon className="h-7 w-7" /></span>
     <span className="min-w-0 flex-1"><span className="block text-3xl font-bold text-slate-900">{value ?? "—"}</span>
       <span className="block text-sm font-semibold text-slate-700">{label}</span>
@@ -133,7 +133,7 @@ export default function AmlDashboardPage() {
       <div><h1 className="text-3xl font-bold tracking-tight text-slate-900">Cruscotto AML</h1><p className="mt-1 text-sm text-slate-500">Panoramica antiriciclaggio · dati del gestionale Studio Manager Pro</p></div>
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={() => setRefresh(n => n+1)} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50" title="Aggiorna dati"><RefreshCw className={"h-4 w-4 " + (loading ? "animate-spin" : "")} /> Aggiorna</button>
-        <Link href="/antiriciclaggio/pratiche/nuovo" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"><Plus className="h-4 w-4" /> Nuova pratica AML</Link>
+        <Link href="/antiriciclaggio/pratiche/nuovo" className="aml-pro-orange-button inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700"><Plus className="h-4 w-4" /> Nuova pratica AML</Link>
       </div>
     </div>
     {state.errors.length > 0 && <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -151,7 +151,7 @@ export default function AmlDashboardPage() {
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-slate-900">Adeguata verifica AV1</h2>
         <div className="flex flex-wrap items-center justify-center gap-6">
-          <div className="flex h-44 w-44 items-center justify-center rounded-full" style={{background: pct===null ? "#e2e8f0" : "conic-gradient(#16a34a "+pct+"%, #e2e8f0 "+pct+"%)"}}>
+          <div className="flex h-44 w-44 items-center justify-center rounded-full" style={{background: pct===null ? "#dbeafe" : "conic-gradient(#0767b9 "+pct+"%, #dbeafe "+pct+"%)"}}>
             <div className="flex h-32 w-32 flex-col items-center justify-center rounded-full bg-white">
               <span className="text-3xl font-bold">{pct===null?"—":pct+"%"}</span>
               <span className="text-center text-xs text-slate-500">AV1 confermate</span>

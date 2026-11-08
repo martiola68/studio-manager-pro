@@ -56,7 +56,7 @@ export function AmlShell({ children }: { children: ReactNode }) {
         const active = pathname === dest || (dest === "/antiriciclaggio" && (pathname === "/antiriciclaggio/pratiche/nuovo" || pathname.startsWith("/antiriciclaggio/pratiche/") || pathname.includes("/modello-av") || pathname.includes("/fascicolo-documenti"))) || (dest === "/aml/clienti" && pathname.startsWith("/aml/clienti/")) || (dest === "/aml/societa" && pathname.startsWith("/aml/societa/")) || (dest === "/aml/utenti" && pathname.startsWith("/aml/utenti/"));
         return (
           <Link key={label} href={href} onClick={() => setMobileOpen(false)}
-            className={"flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors " + (active ? "bg-white text-[#08618b] shadow-sm" : "text-white/90 hover:bg-white/15 hover:text-white")}>
+            className={"aml-pro-nav-item flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors " + (active ? "aml-pro-nav-active bg-white text-[#102856] shadow-sm font-bold" : "text-white/90 hover:bg-white/10 hover:text-white")}>
             <Icon className="h-5 w-5 shrink-0" />
             <span className="flex-1">{label}</span>
             {active && <ChevronRight className="h-4 w-4" />}
@@ -67,11 +67,11 @@ export function AmlShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen bg-[#f3f6fb] text-slate-900">
+    <div className="aml-pro-theme min-h-screen bg-[#f3f6fb] text-slate-900">
       {mobileOpen && <button type="button" className="fixed inset-0 z-[60] bg-slate-950/60 lg:hidden" aria-label="Chiudi menu" onClick={() => setMobileOpen(false)} />}
-      <aside className={"fixed inset-y-0 left-0 z-[70] flex w-64 flex-col bg-gradient-to-b from-[#0b628e] via-[#107fac] to-[#08618b] text-white shadow-xl transition-transform lg:translate-x-0 " + (mobileOpen ? "translate-x-0" : "-translate-x-full")}>
-        <div className="flex items-center gap-3 border-b border-white/20 px-5 py-5">
-          <ShieldCheck className="h-10 w-10 shrink-0 text-white" />
+      <aside className={"aml-pro-sidebar fixed inset-y-0 left-0 z-[70] flex w-64 flex-col bg-gradient-to-b from-[#102856] via-[#0b3269] to-[#102856] text-white shadow-xl transition-transform lg:translate-x-0 " + (mobileOpen ? "translate-x-0" : "-translate-x-full")}>
+        <div className="aml-pro-brand flex items-center gap-3 border-b border-white/20 px-5 py-5">
+          <ShieldCheck className="h-10 w-10 shrink-0 text-orange-400" />
           <div className="min-w-0"><div className="text-[15px] font-bold tracking-tight">Studio Manager Pro</div><div className="text-xs text-sky-100">AML · Antiriciclaggio</div></div>
           <button type="button" className="ml-auto lg:hidden" aria-label="Chiudi menu" onClick={() => setMobileOpen(false)}><X className="h-5 w-5" /></button>
         </div>
@@ -82,11 +82,11 @@ export function AmlShell({ children }: { children: ReactNode }) {
           </button>
         </div>
       </aside>
-      <div className="min-h-screen lg:pl-64">
-        <header className="sticky top-0 z-40 flex min-h-[72px] items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 shadow-sm md:px-7">
+      <div className="aml-pro-workspace min-h-screen lg:pl-64">
+        <header className="aml-pro-topbar sticky top-0 z-40 flex min-h-[72px] items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 shadow-sm md:px-7">
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => setMobileOpen(true)} aria-label="Apri menu AML" className="rounded-lg p-2 hover:bg-slate-100 lg:hidden"><Menu className="h-5 w-5" /></button>
-            <div><div className="font-bold text-slate-900">Studio Manager Pro <span className="text-blue-600">AML</span></div>
+            <div><div className="font-bold text-slate-900">Studio Manager Pro <span className="text-[#f36b15]">AML</span></div>
               <div className="text-xs text-slate-500">Interfaccia dedicata · motore SMP condiviso</div></div>
           </div>
           <div className="flex items-center gap-3 text-sm">
@@ -95,7 +95,7 @@ export function AmlShell({ children }: { children: ReactNode }) {
             <div className="hidden border-l border-slate-200 pl-3 text-right sm:block"><div className="font-semibold text-slate-800">{profile ? profile.nome + " " + profile.cognome : "Utente"}</div><div className="text-xs text-slate-500">{profile?.tipo_utente === "Admin" ? "Amministratore" : "Operatore"}</div></div>
           </div>
         </header>
-        <main className="min-h-[calc(100vh-72px)] px-4 py-6 md:px-7 md:py-7">{children}</main>
+        <main className="aml-pro-content relative min-h-[calc(100vh-72px)] px-4 py-6 md:px-7 md:py-7">{children}</main>
       </div>
     </div>
   );

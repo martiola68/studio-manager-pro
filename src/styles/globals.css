@@ -361,3 +361,139 @@
     border-color: rgb(203 213 225);
   }
 }
+
+
+/* AML PRO 2026 - institutional blue / orange visual identity.
+   Scoped to the dedicated AML shell; original SMP is unaffected. */
+.aml-pro-theme {
+  --aml-navy: #0b2450;
+  --aml-blue: #0865b3;
+  --aml-sky: #2c9df5;
+  --aml-orange: #fa6e13;
+  --aml-border: #adcdf9;
+  --aml-ice: #f3f8ff;
+  color: var(--aml-navy);
+  background: #f2f6fe;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.aml-pro-theme .aml-pro-sidebar {
+  isolation: isolate;
+  overflow: hidden;
+  background: linear-gradient(156deg, #061c40 0%, #0b2c60 47%, #123e78 78%, #081d42 100%) !important;
+  box-shadow: 7px 0 22px rgba(2, 22, 58, .18);
+}
+.aml-pro-theme .aml-pro-sidebar::after {
+  content: ""; position: absolute; inset: auto -16px 62px 0; height: 162px;
+  pointer-events: none; z-index: -1;
+  background:
+    radial-gradient(ellipse at 116% 110%, rgba(255,127,32,.94) 0 13%, transparent 14%),
+    linear-gradient(161deg, transparent 39%, rgba(37,124,207,.46) 41% 55%, transparent 57%),
+    linear-gradient(166deg, transparent 54%, #fa741c 55% 58%, transparent 59%);
+  opacity: .96;
+}
+.aml-pro-theme .aml-pro-brand {
+  min-height: 90px;
+  border-color: rgba(225,240,255,.22);
+  background: linear-gradient(100deg, rgba(40,110,183,.22), transparent);
+}
+.aml-pro-theme .aml-pro-brand svg { filter: drop-shadow(0 2px 3px rgba(2,24,57,.35)); stroke: #fb8830; }
+.aml-pro-theme .aml-pro-nav-item {position: relative; border: 1px solid transparent; color: #ecf4ff; }
+.aml-pro-theme .aml-pro-nav-active {
+  background: linear-gradient(110deg, #fff 0%, #fff4e9 100%) !important;
+  border-color: #ffe0ba !important;
+  color: #102856 !important;
+  box-shadow: 0 4px 13px rgba(1,19,46,.18);
+}
+.aml-pro-theme .aml-pro-nav-active::before {
+  content: ""; width: 4px; height: 65%; background: #fa731b;
+  border-radius: 8px; position:absolute; left: 0; top: 17.5%;
+}
+.aml-pro-theme .aml-pro-nav-active svg:last-child { color: #f36e17; }
+.aml-pro-theme .aml-pro-topbar { box-shadow: 0 3px 16px rgba(13,54,105,.06); }
+.aml-pro-theme .aml-pro-topbar a:hover { color: #f36e17; }
+.aml-pro-theme .aml-pro-workspace { background: #f2f6fe; }
+.aml-pro-theme .aml-pro-content {
+  isolation: isolate;
+  background:
+    linear-gradient(to bottom, rgba(223,235,255,.90) 0, rgba(245,249,255,.5) 210px, transparent 340px),
+    #f3f7ff;
+}
+.aml-pro-theme .aml-pro-content::before {
+  content: ""; position: absolute; z-index: -1;
+  inset: 0 0 auto 0; height: 207px;
+  background: url("/aml-institutional-banner.svg") no-repeat right top / auto 207px;
+  opacity: .90; pointer-events: none;
+}
+.aml-pro-theme .aml-pro-content > * { position: relative; }
+.aml-pro-theme .aml-pro-content h1,
+.aml-pro-theme .aml-pro-content h2,
+.aml-pro-theme .aml-pro-content h3 { color: #0d2451; letter-spacing: -.018em; }
+.aml-pro-theme .aml-pro-content h1 { font-weight: 800; }
+.aml-pro-theme .aml-pro-content h2 { font-weight: 750; }
+.aml-pro-theme .aml-pro-content :is(section, article),
+.aml-pro-theme .aml-pro-content :is(div.rounded-xl.border,div.rounded-lg.border,div.rounded-2xl.border,a.aml-pro-stat-card) {
+  border-color: var(--aml-border);
+  border-radius: 16px;
+  background-image: linear-gradient(150deg, rgba(255,255,255,.99), rgba(246,250,255,.97) 63%, rgba(222,238,255,.72));
+  box-shadow: 0 5px 15px rgba(24,74,142,.065);
+}
+.aml-pro-theme .aml-pro-content a.aml-pro-stat-card {
+  border: 1px solid #afd0ff !important;
+  background: linear-gradient(142deg, #ffffff, #ebf5ff 75%, #dceaff) !important;
+  box-shadow: 0 7px 18px rgba(20,71,146,.10);
+}
+.aml-pro-theme .aml-pro-content a.aml-pro-stat-card:hover {
+  border-color: #4797f0 !important; box-shadow: 0 10px 24px rgba(16,87,180,.18);
+}
+.aml-pro-theme .aml-pro-content :is(section, article) > h2:first-child,
+.aml-pro-theme .aml-pro-content :is(section,article) > div:first-child > h2:first-child {
+  border-left: 5px solid #f97419; padding-left: 12px; line-height: 1.35;
+}
+.aml-pro-theme .aml-pro-content :is(button,a).aml-pro-orange-button {
+  background: linear-gradient(120deg, #ff861d, #ef5500) !important;
+  color: white !important; border: 1px solid #ec6714 !important;
+  border-radius: 12px; box-shadow: 0 5px 13px rgba(238,100,22,.17);
+}
+.aml-pro-theme .aml-pro-content :is(button,a).aml-pro-orange-button:hover {
+  background: linear-gradient(120deg, #f36c11, #d94b00) !important;
+}
+.aml-pro-theme .aml-pro-content :is(button,a).bg-blue-600,
+.aml-pro-theme .aml-pro-content :is(button,a).bg-sky-700,
+.aml-pro-theme .aml-pro-content :is(button,a).bg-\[\#0369a1\] {
+  border-radius: 12px;
+  background: linear-gradient(125deg, #187fdb, #0758b0) !important;
+  border-color: #217bdb;
+  color: white;
+  box-shadow: 0 3px 10px rgba(13,85,179,.11);
+}
+.aml-pro-theme .aml-pro-content :is(button,a).bg-blue-600:hover,
+.aml-pro-theme .aml-pro-content :is(button,a).bg-sky-700:hover {
+  background: linear-gradient(120deg, #0e6ac6, #064b9c) !important;
+}
+.aml-pro-theme .aml-pro-content :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) {
+  border-radius: 9px;
+}
+.aml-pro-theme .aml-pro-content :is(input,select,textarea):focus-visible {
+  border-color: #3184e5; outline: 2px solid rgba(49,132,229,.22); outline-offset: 1px;
+}
+.aml-pro-theme .aml-pro-content table {border-collapse: separate; border-spacing: 0; width: 100%;}
+.aml-pro-theme .aml-pro-content table thead th {
+  background: linear-gradient(180deg, #e9f3ff, #d4e6ff) !important;
+  color: #102b60 !important; border-bottom: 1px solid #b3d0f8;
+  font-weight: 750;
+}
+.aml-pro-theme .aml-pro-content table tbody tr {background: rgba(255,255,255,.78);}
+.aml-pro-theme .aml-pro-content table tbody tr:nth-child(even) {background: rgba(237,246,255,.49);}
+.aml-pro-theme .aml-pro-content table tbody tr:hover {background: rgba(220,236,255,.58);}
+.aml-pro-theme .aml-pro-content table :is(td,th) { border-color: #d7e5f7; }
+.aml-pro-theme .aml-pro-content :is(.text-blue-600,.text-blue-700,.text-sky-700) {color: #0965bb;}
+.aml-pro-theme .aml-pro-content :is(.bg-blue-50,.bg-sky-50) { border-color: #bbd7fc; }
+.aml-pro-theme .aml-pro-content .rounded-full { border-radius: 9999px !important; }
+@media (max-width: 768px) {
+  .aml-pro-theme .aml-pro-content::before {height: 142px; background-size: auto 142px;opacity:.42;}
+  .aml-pro-theme .aml-pro-content {padding-top: 20px;}
+  .aml-pro-theme .aml-pro-content a.aml-pro-stat-card {min-width: 0;}
+}
+@media (prefers-reduced-motion: reduce) {
+  .aml-pro-theme *, .aml-pro-theme *::before, .aml-pro-theme *::after {transition-duration: .01ms !important; animation-duration: .01ms !important;}
+}
