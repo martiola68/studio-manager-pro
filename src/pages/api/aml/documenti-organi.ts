@@ -62,7 +62,16 @@ export default async function handler(req:NextApiRequest,res:NextApiResponse){
   // Sincronizza il documento già conservato nell'anagrafica con il fascicolo
   // della pratica selezionata: un solo riferimento, senza duplicare il file.
   if(req.method==="POST"&&str(req.body?.action)==="sync"){
-    if(!praticaId||ids.length!==1)return res.status(400).json({error:"Pratica o amministratore associato non univoco"});
+    // L'assenza di un rappresentante univoco non deve bloccare il fascicolo:
+    // non collegare mai documenti ad un soggetto scelto arbitrariamente.
+    if(!praticaId||ids.length!==1){
+      return res.status(200).json({
+        ok:true,
+        synced:false,
+        reason:"amministratore_non_associato",
+        notice:"Amministratore da associare. Verifica gli Organi sociali e il rappresentante AV4."
+      });
+    }
     const documents=await db.from("tbclienti_documenti_aml")
       .select("id,tipo_documento,allegato_documento")
       .eq("studio_id",studioId).eq("soggetto_cliente_id",ids[0]).eq("attivo",true)
