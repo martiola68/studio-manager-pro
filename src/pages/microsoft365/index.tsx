@@ -691,7 +691,7 @@ async function handleCreateConnection() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="aml-m365-page mx-auto max-w-5xl space-y-6">
       <div className="mb-2">
         <h1 className="text-3xl font-bold tracking-tight">Microsoft 365</h1>
         <p className="text-muted-foreground">

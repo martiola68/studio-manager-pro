@@ -767,8 +767,8 @@ export default function AntiriciclaggioPage() {
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <h1 className="text-2xl font-bold">Elenco Antiriciclaggio</h1>
         <div className="flex items-center gap-2">
+          <button type="button" onClick={handleNuovoAV1} disabled={!canAccessAntiriciclaggio} className="aml-outline-action">Nuova pratica</button>
           {canAccessAntiriciclaggio && isProtectedSocieta && <button type="button" onClick={handleCloseAccess} className="rounded-xl border border-red-300 bg-white px-4 py-2 text-red-700 hover:bg-red-50">Chiudi accesso</button>}
-          <button type="button" onClick={handleNuovoAV1} disabled={!canAccessAntiriciclaggio} className={`rounded-xl border px-4 py-2 font-semibold text-white ${canAccessAntiriciclaggio ? "border-[#0369a1] bg-[#0369a1] hover:border-[#0284c7] hover:bg-[#0284c7]" : "cursor-not-allowed border-gray-400 bg-gray-400"}`}>Nuova pratica</button>
         </div>
       </div>
 
@@ -894,8 +894,8 @@ export default function AntiriciclaggioPage() {
                       </select>
                     </label>}
                     <button type="button" onClick={() => handleAggiungiPrestazione(row)}
-                      className="mt-2 rounded-md border border-sky-500 bg-white px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-50">
-                      + Aggiungi prestazione
+                      className="aml-outline-action mt-2 !min-h-8 !px-3 !py-1 !text-xs">
+                      Aggiungi prestazione
                     </button>
                   </td>
                   <td className="p-3">{cliente?.utente_operatore ? `${cliente.utente_operatore.nome || ""} ${cliente.utente_operatore.cognome || ""}`.trim() || "-" : "-"}</td>

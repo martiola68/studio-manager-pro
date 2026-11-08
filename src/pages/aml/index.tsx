@@ -132,8 +132,8 @@ export default function AmlDashboardPage() {
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div><h1 className="text-3xl font-bold tracking-tight text-slate-900">Cruscotto AML</h1><p className="mt-1 text-sm text-slate-500">Panoramica antiriciclaggio · dati del gestionale Studio Manager Pro</p></div>
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => setRefresh(n => n+1)} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50" title="Aggiorna dati"><RefreshCw className={"h-4 w-4 " + (loading ? "animate-spin" : "")} /> Aggiorna</button>
-        <Link href="/antiriciclaggio/pratiche/nuovo" className="aml-pro-orange-button inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700"><Plus className="h-4 w-4" /> Nuova pratica AML</Link>
+        <button type="button" onClick={() => setRefresh(n => n+1)} className="aml-outline-action"><RefreshCw className={"h-4 w-4 " + (loading ? "animate-spin" : "")} /> Aggiorna dati</button>
+        <Link href="/antiriciclaggio/pratiche/nuovo" className="aml-outline-action"><Plus className="h-4 w-4" /> Nuova pratica</Link>
       </div>
     </div>
     {state.errors.length > 0 && <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">

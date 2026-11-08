@@ -8,7 +8,6 @@ import {
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { hardLogout } from "@/services/logoutService";
 import { useStudio } from "@/contexts/StudioContext";
-import AmlActionIconEnhancer from "@/components/aml/AmlActionIconEnhancer";
 
 export const AML_INTERFACE_KEY = "smp_interface_aml";
 
@@ -96,7 +95,7 @@ export function AmlShell({ children }: { children: ReactNode }) {
             <div className="hidden border-l border-slate-200 pl-3 text-right sm:block"><div className="font-semibold text-slate-800">{profile ? profile.nome + " " + profile.cognome : "Utente"}</div><div className="text-xs text-slate-500">{profile?.tipo_utente === "Admin" ? "Amministratore" : "Operatore"}</div></div>
           </div>
         </header>
-        <main className="aml-pro-content relative min-h-[calc(100vh-72px)] px-4 py-6 md:px-7 md:py-7"><AmlActionIconEnhancer />{children}</main>
+        <main className="aml-pro-content relative min-h-[calc(100vh-72px)] px-4 py-6 md:px-7 md:py-7">{children}</main>
       </div>
     </div>
   );
