@@ -31,8 +31,8 @@ export default function AmlLicenza() {
   },[isLoading,studioId]);
   if(loading||isLoading)return <p className="p-8 text-slate-500">Verifica licenza AML...</p>;
   return <div className="mx-auto max-w-3xl space-y-5">
-    <div><Link href="/aml" className="text-sm font-semibold text-blue-700">← Cruscotto AML</Link><h1 className="mt-3 text-2xl font-bold">Licenza e attivazione AML</h1>
-    <p className="mt-2 text-sm text-slate-500">Consulta lo stato della licenza del tuo studio. L'attivazione commerciale viene effettuata dopo verifica amministrativa e conferma del pagamento.</p></div>
+    <div><Link href="/aml" className="text-sm font-semibold text-blue-700">← Cruscotto AML</Link><h1 className="mt-3 text-2xl font-bold">Stato licenza AML</h1>
+    <p className="mt-2 text-sm text-slate-500">Questa sezione è riservata alla consultazione della licenza già assegnata allo studio. Le richieste di nuova attivazione sono gestite esclusivamente dal portale amministrativo Studio Manager Pro, prima del rilascio delle credenziali.</p></div>
     {error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">{error}</div>}
     {info&&<section className="space-y-3 rounded-2xl border bg-white p-6 shadow-sm">
       <h2 className="font-bold">{info.studio?.ragione_sociale||"Studio"}</h2>
@@ -44,7 +44,7 @@ export default function AmlLicenza() {
         <div><dt className="text-slate-500">Accesso al modulo AML</dt><dd className="font-semibold">{hasModule("aml")?"Abilitato":"Non abilitato"}</dd></div>
         <div><dt className="text-slate-500">Tipologia licenza</dt><dd className="font-semibold">{amlOnly?"AML autonoma":"AML incluso nel piano SMP"}</dd></div>
       </dl>
-      <p className="border-t pt-4 text-xs text-slate-500">Questa pagina non attiva licenze, non modifica gli abbonamenti e non addebita pagamenti.</p>
+      <p className="border-t pt-4 text-xs text-slate-500">Solo consultazione: nessuna richiesta di attivazione, approvazione, creazione di credenziali o modifica degli abbonamenti è consentita da questa pagina.</p>
     </section>}
   </div>;
 }
