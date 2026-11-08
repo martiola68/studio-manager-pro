@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { ShieldCheck, CheckCircle2, ArrowLeft } from "lucide-react";
+import { isValidItalianVat } from "@/lib/aml/italianVat";
 
 type Fields={ragione_sociale:string;partita_iva:string;referente:string;email:string;telefono:string;piano:"starter"|"professional"|"business";note:string;consenso:boolean;website:string};
 const initial:Fields={ragione_sociale:"",partita_iva:"",referente:"",email:"",telefono:"",piano:"starter",note:"",consenso:false,website:""};
@@ -12,10 +13,13 @@ export default function RichiediAttivazioneAml(){
  const [saving,setSaving]=useState(false);
  const [result,setResult]=useState("");
  const [error,setError]=useState("");
+ const vatComplete=form.partita_iva.length===11;
+ const vatValid=isValidItalianVat(form.partita_iva);
  const update=<K extends keyof Fields>(key:K,value:Fields[K])=>setForm(f=>({...f,[key]:value}));
  const submit=async(e:FormEvent)=>{
   e.preventDefault();setError("");setResult("");setSaving(true);
   try{
+   if(!vatValid)throw new Error("Partita IVA non valida: inserisci 11 cifre con codice di controllo corretto.");
    const response=await fetch("/api/aml/richieste-attivazione",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...form,startedAt})});
    const data=await response.json().catch(()=>({}));
    if(!response.ok||!data.ok)throw new Error(data.error||"Invio non riuscito.");
@@ -35,7 +39,7 @@ export default function RichiediAttivazioneAml(){
      <p className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">Compila i dati dello studio. La richiesta viene esaminata prima dell'attivazione della licenza. Non viene creato automaticamente alcun account.</p>
      <label className="block text-sm font-semibold">Studio / denominazione *<input className={input} maxLength={200} required value={form.ragione_sociale} onChange={e=>update("ragione_sociale",e.target.value)}/></label>
      <div className="grid gap-4 sm:grid-cols-2">
-      <label className="block text-sm font-semibold">Partita IVA / codice fiscale<input className={input} maxLength={32} value={form.partita_iva} onChange={e=>update("partita_iva",e.target.value)}/></label>
+      <label className="block text-sm font-semibold">Partita IVA *<input className={input} type="text" inputMode="numeric" autoComplete="off" maxLength={11} minLength={11} pattern="[0-9]{11}" required aria-invalid={vatComplete&&!vatValid} aria-describedby="aml-vat-status" value={form.partita_iva} onChange={e=>update("partita_iva",e.target.value.replace(/\\D/g,"").slice(0,11))}/><span id="aml-vat-status" aria-live="polite" className={"mt-1 block text-xs "+(vatComplete?(vatValid?"text-green-700":"text-red-700"):"text-slate-500")}>{vatComplete?(vatValid?"Partita IVA formalmente valida":"Partita IVA non valida: controlla le cifre"):"Inserisci esattamente 11 cifre"}</span></label>
       <label className="block text-sm font-semibold">Referente *<input className={input} maxLength={160} minLength={3} required value={form.referente} onChange={e=>update("referente",e.target.value)}/></label>
      </div>
      <div className="grid gap-4 sm:grid-cols-2">
@@ -47,7 +51,7 @@ export default function RichiediAttivazioneAml(){
      <label className="flex items-start gap-2 text-sm text-slate-700"><input type="checkbox" className="mt-1" required checked={form.consenso} onChange={e=>update("consenso",e.target.checked)}/><span>Acconsento al trattamento dei dati inseriti per la gestione della richiesta commerciale e dichiaro di aver letto l'informativa privacy. *</span></label>
      <label className="absolute -left-[10000px]" aria-hidden="true">Non compilare<input type="text" tabIndex={-1} autoComplete="off" value={form.website} onChange={e=>update("website",e.target.value)}/></label>
      {error&&<p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-     <button type="submit" disabled={saving||!form.consenso} className="w-full rounded-xl bg-[#0765ba] px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{saving?"Invio richiesta...":"Invia richiesta di attivazione"}</button>
+     <button type="submit" disabled={saving||!form.consenso||!vatValid} className="w-full rounded-xl bg-[#0765ba] px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{saving?"Invio richiesta...":"Invia richiesta di attivazione"}</button>
      <p className="text-center text-xs text-slate-500">La richiesta non comporta pagamento, attivazione automatica o accesso al database.</p>
     </form>}
    </div>

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { isValidItalianVat } from "@/lib/aml/italianVat";
 
 type RequestBody = {
   ragione_sociale?: unknown;
@@ -26,9 +27,10 @@ export default async function handler(req:NextApiRequest,res:NextApiResponse){
    email=clean(body.email,254).toLowerCase(),telefono=clean(body.telefono,40),
    piano=clean(body.piano,30),note=clean(body.note,500),website=clean(body.website,80);
  if(website)return res.status(200).json({ok:true,message:"Richiesta registrata per verifica."});
+ if(!isValidItalianVat(piva))return res.status(400).json({error:"Partita IVA non valida: servono 11 cifre e codice di controllo corretto."});
  if(studio.length<2||studio.length>200||ref.length<3||ref.length>160||!emailRegex.test(email)||
     email.length>254||!allowedPlans.has(piano)||body.consenso!==true||
-    piva.length>32||telefono.length>40||note.length>500){
+    telefono.length>40||note.length>500){
    return res.status(400).json({error:"Controlla i dati obbligatori e il consenso privacy."});
  }
  const startedAt=Number(body.startedAt);
