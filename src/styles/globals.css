@@ -576,3 +576,128 @@
     padding-left: 9px;
   }
 }
+
+
+/* AML PRO - consistent interactive actions throughout the independent application.
+   Icon-only actions are decorated without altering React-owned nodes. */
+.aml-pro-theme .aml-pro-content button:not([role="checkbox"]):not([role="switch"]),
+.aml-pro-theme .aml-pro-content a[class*="rounded"] {
+  border-radius: 12px !important;
+}
+.aml-pro-theme .aml-pro-content :is(button,a):is(.bg-black,.bg-slate-900,.bg-gray-900,.bg-neutral-900),
+.aml-pro-theme .aml-pro-content :is(button,a)[style*="background: black"],
+.aml-pro-theme .aml-pro-content :is(button,a)[style*="background: #000"] {
+  color: #fff !important;
+  background: linear-gradient(130deg,#2183dc,#075bb0) !important;
+  border-color: #1677d1 !important;
+}
+.aml-pro-theme .aml-pro-content :is(button,a):is(.bg-black,.bg-slate-900,.bg-gray-900,.bg-neutral-900):hover {
+  background: linear-gradient(135deg,#126cc6,#064586) !important;
+}
+/* Shared icon buttons: edit=blue, add=orange, delete=red. */
+.aml-pro-theme .aml-pro-content [data-aml-action] {
+  --aml-icon-color: #0869be;
+  --aml-icon-border: #91c3fb;
+  --aml-icon-bg: linear-gradient(140deg,#fff,#e6f2ff);
+  appearance: none;
+  display: inline-flex !important;
+  position: relative !important;
+  vertical-align: middle !important;
+  flex: 0 0 auto;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  max-height: 42px !important;
+  padding: 0 !important;
+  margin-block: 1px;
+  border: 1px solid var(--aml-icon-border) !important;
+  border-radius: 12px !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  text-indent: 0 !important;
+  white-space: nowrap !important;
+  background: var(--aml-icon-bg) !important;
+  box-shadow: 0 2px 8px rgba(13,76,153,.1) !important;
+  text-decoration: none !important;
+  overflow: visible !important;
+  cursor: pointer;
+  transition: border-color .16s,box-shadow .16s,transform .16s !important;
+}
+.aml-pro-theme .aml-pro-content [data-aml-action] > * {
+  display: none !important;
+}
+.aml-pro-theme .aml-pro-content [data-aml-action="add"] {
+  --aml-icon-color: #da5d0c;
+  --aml-icon-border: #ffbf87;
+  --aml-icon-bg: linear-gradient(140deg,#fff,#fff0de);
+}
+.aml-pro-theme .aml-pro-content [data-aml-action="delete"] {
+  --aml-icon-color: #dc2626;
+  --aml-icon-border: #ffb2b2;
+  --aml-icon-bg: linear-gradient(140deg,#fff,#fff0f0);
+}
+.aml-pro-theme .aml-pro-content [data-aml-action]:not(:disabled):hover,
+.aml-pro-theme .aml-pro-content [data-aml-action]:focus-visible {
+  border-color: var(--aml-icon-color) !important;
+  box-shadow: 0 5px 16px rgba(18,81,155,.2) !important;
+  transform: translateY(-1px);
+  outline: 2px solid transparent;
+}
+.aml-pro-theme .aml-pro-content [data-aml-action]:focus-visible {
+  outline: 2px solid #2c9df5;
+  outline-offset: 2px;
+}
+.aml-pro-theme .aml-pro-content [data-aml-action]:disabled,
+.aml-pro-theme .aml-pro-content [data-aml-action][aria-disabled="true"] {
+  opacity: .48; cursor: not-allowed;
+}
+.aml-pro-theme .aml-pro-content [data-aml-action]::after {
+  content: "";
+  flex: none;
+  display: block;
+  height: 20px; width: 20px;
+  background-color: var(--aml-icon-color);
+  -webkit-mask: var(--aml-action-symbol) center / contain no-repeat;
+  mask: var(--aml-action-symbol) center / contain no-repeat;
+}
+.aml-pro-theme .aml-pro-content [data-aml-action="edit"] {
+  --aml-action-symbol: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E");
+}
+.aml-pro-theme .aml-pro-content [data-aml-action="add"] {
+  --aml-action-symbol: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
+}
+.aml-pro-theme .aml-pro-content [data-aml-action="delete"] {
+  --aml-action-symbol: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h18M8 6V4h8v2M5 6l1 15h12l1-15M10 10v7M14 10v7'/%3E%3C/svg%3E");
+}
+.aml-pro-theme .aml-pro-content [data-aml-action]::before {
+  content: attr(data-aml-tooltip);
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  transform: translateX(-50%);
+  z-index: 120;
+  display: none;
+  max-width: 240px;
+  min-width: max-content;
+  padding: 7px 10px;
+  border-radius: 8px;
+  color: #fff;
+  background: #102856;
+  box-shadow: 0 5px 16px rgba(0,21,63,.3);
+  font: 600 12px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.aml-pro-theme .aml-pro-content [data-aml-action]:is(:hover,:focus-visible)::before {
+  display: block;
+}
+@media (hover: none) {
+  .aml-pro-theme .aml-pro-content [data-aml-action]::before {display: none !important;}
+}
