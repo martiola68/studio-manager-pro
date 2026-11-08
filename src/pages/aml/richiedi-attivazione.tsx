@@ -1,35 +1,22 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import Head from "next/head";
 import Link from "next/link";
-import Script from "next/script";
 import { ShieldCheck, CheckCircle2, ArrowLeft } from "lucide-react";
 
-declare global { interface Window { turnstile?: {render:(el:HTMLElement,options:Record<string,unknown>)=>string;remove?:(id:string)=>void;} } }
 type Fields={ragione_sociale:string;partita_iva:string;referente:string;email:string;telefono:string;piano:"starter"|"professional"|"business";note:string;consenso:boolean;website:string};
 const initial:Fields={ragione_sociale:"",partita_iva:"",referente:"",email:"",telefono:"",piano:"starter",note:"",consenso:false,website:""};
 const input="mt-1 w-full rounded-xl border border-sky-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500";
 export default function RichiediAttivazioneAml(){
  const [form,setForm]=useState<Fields>(initial);
  const [startedAt]=useState(()=>Date.now());
- const [token,setToken]=useState("");
- const [widgetNode,setWidgetNode]=useState<HTMLDivElement|null>(null);
- const [loaded,setLoaded]=useState(false);
  const [saving,setSaving]=useState(false);
  const [result,setResult]=useState("");
  const [error,setError]=useState("");
- const siteKey=process.env.NEXT_PUBLIC_AML_TURNSTILE_SITE_KEY||"";
- useEffect(()=>{
-  if(!siteKey||!loaded||!widgetNode||!window.turnstile)return;
-  widgetNode.innerHTML="";
-  const id=window.turnstile.render(widgetNode,{sitekey:siteKey,callback:(v:unknown)=>setToken(String(v||"")),"expired-callback":()=>setToken(""),"error-callback":()=>setToken("")});
-  return()=>{window.turnstile?.remove?.(id);};
- },[siteKey,loaded,widgetNode]);
  const update=<K extends keyof Fields>(key:K,value:Fields[K])=>setForm(f=>({...f,[key]:value}));
  const submit=async(e:FormEvent)=>{
   e.preventDefault();setError("");setResult("");setSaving(true);
   try{
-   if(!siteKey||!token)throw new Error("Completa la verifica di sicurezza.");
-   const response=await fetch("/api/aml/richieste-attivazione",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...form,startedAt,turnstileToken:token})});
+   const response=await fetch("/api/aml/richieste-attivazione",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...form,startedAt})});
    const data=await response.json().catch(()=>({}));
    if(!response.ok||!data.ok)throw new Error(data.error||"Invio non riuscito.");
    setResult(data.message||"Richiesta acquisita.");
@@ -38,7 +25,6 @@ export default function RichiediAttivazioneAml(){
  };
  return <>
  <Head><title>Richiedi AML PRO | Studio Manager Pro</title><meta name="robots" content="noindex,follow"/></Head>
- {siteKey&&<Script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" strategy="afterInteractive" onLoad={()=>setLoaded(true)}/>}
  <main className="min-h-screen bg-gradient-to-br from-[#0b2450] via-[#123f7c] to-[#0764b6] px-4 py-8 text-slate-900">
   <div className="mx-auto max-w-2xl">
    <Link href="/login?next=/aml" className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-white"><ArrowLeft className="h-4 w-4"/> Torna all'accesso AML</Link>
@@ -60,9 +46,8 @@ export default function RichiediAttivazioneAml(){
      <label className="block text-sm font-semibold">Informazioni aggiuntive (facoltative)<textarea rows={3} maxLength={500} className={input} value={form.note} onChange={e=>update("note",e.target.value)} /></label>
      <label className="flex items-start gap-2 text-sm text-slate-700"><input type="checkbox" className="mt-1" required checked={form.consenso} onChange={e=>update("consenso",e.target.checked)}/><span>Acconsento al trattamento dei dati inseriti per la gestione della richiesta commerciale e dichiaro di aver letto l'informativa privacy. *</span></label>
      <label className="absolute -left-[10000px]" aria-hidden="true">Non compilare<input type="text" tabIndex={-1} autoComplete="off" value={form.website} onChange={e=>update("website",e.target.value)}/></label>
-     {siteKey?<div ref={setWidgetNode} className="min-h-16"/>:<p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Richieste online non ancora abilitate: verifica di sicurezza da configurare.</p>}
      {error&&<p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-     <button type="submit" disabled={saving||!form.consenso||!siteKey||!token} className="w-full rounded-xl bg-[#0765ba] px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{saving?"Invio richiesta...":"Invia richiesta di attivazione"}</button>
+     <button type="submit" disabled={saving||!form.consenso} className="w-full rounded-xl bg-[#0765ba] px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{saving?"Invio richiesta...":"Invia richiesta di attivazione"}</button>
      <p className="text-center text-xs text-slate-500">La richiesta non comporta pagamento, attivazione automatica o accesso al database.</p>
     </form>}
    </div>
