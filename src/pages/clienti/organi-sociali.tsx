@@ -399,6 +399,7 @@ const [socioCompagineForm, setSocioCompagineForm] = useState({
 const [nuovoNominativo, setNuovoNominativo] = useState({
   nome_cognome: "",
   codice_fiscale: "",
+  soggetto_estero: false,
   email: "",
   luogo_nascita: "",
   data_nascita: "",
@@ -593,6 +594,7 @@ const { data, error } = await supabase
   nome,
   tipo_cliente,
   codice_fiscale,
+  soggetto_estero,
     partita_iva,
     email,
     indirizzo,
@@ -982,8 +984,12 @@ async function salvaNuovoNominativo() {
     return;
   }
 
-  if (!nuovoNominativo.codice_fiscale.trim()) {
-    alert("Codice fiscale obbligatorio.");
+  if (!nuovoNominativo.soggetto_estero && !nuovoNominativo.codice_fiscale.trim()) {
+    alert("Codice fiscale obbligatorio per soggetti italiani.");
+    return;
+  }
+  if (!nuovoNominativo.soggetto_estero && !isCodiceFiscaleNominativoValido()) {
+    alert("Codice fiscale italiano non valido.");
     return;
   }
 
@@ -1029,10 +1035,8 @@ nome:
     ? nominativoSeparato.nome || null
     : null,
 
-codice_fiscale:
-  nuovoNominativo.codice_fiscale
-    .trim()
-    .toUpperCase(),
+codice_fiscale: nuovoNominativo.soggetto_estero ? null : nuovoNominativo.codice_fiscale.trim().toUpperCase(),
+soggetto_estero: nuovoNominativo.soggetto_estero,
 
     email:
       nuovoNominativo.email.trim() ||
@@ -1204,6 +1208,7 @@ setNuovoNominativoDestinazione(
 setNuovoNominativo({
   nome_cognome: "",
   codice_fiscale: "",
+  soggetto_estero: false,
   email: "",
   luogo_nascita: "",
   data_nascita: "",
@@ -1910,6 +1915,7 @@ function getTipoRuolo(ruolo: string) {
 
     codice_fiscale:
       nominativo.codice_fiscale || "",
+    soggetto_estero: nominativo.soggetto_estero === true,
 
     email:
       nominativo.email || "",
@@ -2005,6 +2011,7 @@ function isCaricaScaduta(
 }
 
 function isCodiceFiscaleNominativoValido(): boolean {
+  if (nuovoNominativo.soggetto_estero) return true;
   const codice = normalizeCF(
     nuovoNominativo.codice_fiscale || ""
   );
@@ -3185,6 +3192,7 @@ return (
             setNuovoNominativo({
               nome_cognome: "",
               codice_fiscale: "",
+  soggetto_estero: false,
               email: "",
               luogo_nascita: "",
               data_nascita: "",
@@ -3335,9 +3343,24 @@ return (
                       Società / ente
                     </option>
                   </select>
+                 <div style={{ gridColumn: "1 / -1" }}>
+                   <label style={{ ...labelStyle, display: "inline-flex", alignItems: "center", gap: 9, cursor: "pointer" }}>
+                     <input type="checkbox" checked={nuovoNominativo.soggetto_estero}
+                       onChange={(e) => setNuovoNominativo((p) => ({
+                         ...p, soggetto_estero: e.target.checked,
+                         codice_fiscale: e.target.checked ? "" : p.codice_fiscale,
+                       }))} />
+                     Soggetto estero (senza codice fiscale italiano)
+                   </label>
+                   {nuovoNominativo.soggetto_estero && (
+                     <div style={{ fontSize: 12, marginTop: 4, color: "#17668b" }}>
+                       Codice fiscale italiano non richiesto per questo nominativo.
+                     </div>
+                   )}
+                 </div>
                 </div>
 
-                <div>
+                <div style={{ display: nuovoNominativo.soggetto_estero ? "none" : undefined }}>
                   <label style={labelStyle}>
                     {nuovoNominativo.tipologia_cliente ===
                     "Persona fisica"

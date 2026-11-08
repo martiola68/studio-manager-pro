@@ -61,6 +61,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     Object.keys(updateData).forEach((k) => {
       if (updateData[k] === undefined) delete updateData[k];
     });
+    if (Object.prototype.hasOwnProperty.call(updateData, "soggetto_estero")) {
+      if (typeof updateData.soggetto_estero !== "boolean") {
+        return res.status(400).json({ error: "Flag soggetto estero non valido" });
+      }
+      if (updateData.soggetto_estero) {
+        updateData.codice_fiscale = null;
+      } else if (!String(updateData.codice_fiscale || "").trim()) {
+        return res.status(400).json({ error: "Codice fiscale obbligatorio per soggetto italiano" });
+      }
+    }
 
     const scadenzariKeys = [
       "flag_iva",
