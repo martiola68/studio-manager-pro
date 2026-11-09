@@ -9,6 +9,7 @@ import { AlertCircle, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ClientOnlyAuthCallback() {
+  const targetAfterAuthentication = () => (typeof window !== "undefined" && window.location.hostname === "aml.studiomanagerpro.it") ? "/aml" : "/dashboard";
   const router = useRouter();
   const { toast } = useToast();
 
@@ -64,7 +65,7 @@ export default function ClientOnlyAuthCallback() {
           return;
         }
 
-        router.push("/dashboard");
+        router.push(targetAfterAuthentication());
         return;
       }
 
@@ -87,7 +88,7 @@ export default function ClientOnlyAuthCallback() {
           setLoading(false);
           return;
         }
-        router.push("/dashboard");
+        router.push(targetAfterAuthentication());
       } else {
         setError("Sessione non valida. Torna al login.");
         setLoading(false);
@@ -129,7 +130,7 @@ export default function ClientOnlyAuthCallback() {
         description: "Accesso in corso...",
       });
 
-      setTimeout(() => router.push("/dashboard"), 1000);
+      setTimeout(() => router.push(targetAfterAuthentication()), 1000);
     } catch (err) {
       console.error("Password update error:", err);
       setError("Errore durante l'impostazione della password");
