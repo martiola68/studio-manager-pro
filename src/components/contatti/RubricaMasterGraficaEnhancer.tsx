@@ -114,17 +114,31 @@ export function RubricaMasterGraficaEnhancer() {
   return (
     <style jsx global>{`
       .rubrica-master-page { background: rgb(241 245 249); }
-      .rubrica-master-page > div {
+      .rubrica-master-page > div.rubrica-scroll-layout {
         width: 100% !important;
         max-width: none !important;
-        height: 100% !important;
-        min-height: 0;
+        height: auto !important;
+        min-height: 100% !important;
         padding-top: 12px !important;
         padding-bottom: 12px !important;
-        display: flex;
-        flex-direction: column;
+        display: block !important;
+        overflow: visible !important;
       }
-      .rubrica-master-page > div > div:first-child {
+      .rubrica-master-page .rubrica-sticky-controls {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 40 !important;
+        background: rgb(241 245 249) !important;
+        padding: 0 0 8px !important;
+      }
+      .rubrica-master-page .rubrica-page-heading {
+        position: static !important;
+        margin-bottom: 8px !important;
+      }
+      .rubrica-master-page .rubrica-filter-panel {
+        margin-bottom: 0 !important;
+      }
+      .rubrica-master-page .rubrica-page-heading {
         flex: 0 0 auto;
         position: static !important;
         margin-bottom: 10px !important;
@@ -133,26 +147,26 @@ export function RubricaMasterGraficaEnhancer() {
         border-radius: 8px !important;
         background: rgb(248 250 252) !important;
       }
-      .rubrica-master-page > div > div:first-child h1 {
+      .rubrica-master-page .rubrica-page-heading h1 {
         color: rgb(15 23 42) !important;
         font-size: 1.5rem !important;
         line-height: 2rem !important;
       }
-      .rubrica-master-page > div > div:first-child p {
+      .rubrica-master-page .rubrica-page-heading p {
         font-size: .875rem !important;
         color: rgb(100 116 139) !important;
       }
-      .rubrica-master-page > div > div:first-child button[class*="bg-blue-600"] {
+      .rubrica-master-page .rubrica-page-heading button[class*="bg-blue-600"] {
         background: rgb(3 105 161) !important;
         border-color: rgb(3 105 161) !important;
         color: white !important;
       }
-      .rubrica-master-page > div > div:first-child button[class*="border-green-600"] {
+      .rubrica-master-page .rubrica-page-heading button[class*="border-green-600"] {
         background: white !important;
         border-color: rgb(3 105 161) !important;
         color: rgb(3 105 161) !important;
       }
-      .rubrica-master-page > div > div:nth-child(2) {
+      .rubrica-master-page .rubrica-filter-panel {
         flex: 0 0 auto;
         margin-bottom: 10px !important;
         border: 1px solid rgb(186 230 253) !important;
@@ -160,14 +174,14 @@ export function RubricaMasterGraficaEnhancer() {
         background: rgb(248 250 252) !important;
         box-shadow: none !important;
       }
-      .rubrica-master-page > div > div:nth-child(2) > div:first-child { padding: 9px 14px 4px !important; }
-      .rubrica-master-page > div > div:nth-child(2) > div:nth-child(2) { padding: 6px 14px 10px !important; }
-      .rubrica-master-page > div > div:nth-child(2) input {
+      .rubrica-master-page .rubrica-filter-panel > div:first-child { padding: 9px 14px 4px !important; }
+      .rubrica-master-page .rubrica-filter-panel > div:nth-child(2) { padding: 6px 14px 10px !important; }
+      .rubrica-master-page .rubrica-filter-panel input {
         height: 34px !important;
         background: white !important;
         border-color: rgb(203 213 225) !important;
       }
-      .rubrica-master-page > div > div:nth-child(2) button {
+      .rubrica-master-page .rubrica-filter-panel button {
         width: 32px !important;
         min-width: 32px !important;
         height: 30px !important;
@@ -176,12 +190,12 @@ export function RubricaMasterGraficaEnhancer() {
         border-color: rgb(125 211 252) !important;
         color: rgb(3 105 161) !important;
       }
-      .rubrica-master-page > div > div:nth-child(2) button[class*="bg-red-600"] {
+      .rubrica-master-page .rubrica-filter-panel button[class*="bg-red-600"] {
         background: rgb(3 105 161) !important;
         border-color: rgb(3 105 161) !important;
         color: white !important;
       }
-      .rubrica-master-page > div > div:nth-child(2) button:first-child {
+      .rubrica-master-page .rubrica-filter-panel button:first-child {
         width: 52px !important;
         min-width: 52px !important;
       }
@@ -208,40 +222,31 @@ export function RubricaMasterGraficaEnhancer() {
         min-width: 56px !important;
         width: auto !important;
       }
-      .rubrica-master-page > div > div:nth-child(2) button.rubrica-scroll-letter-active {
+      .rubrica-master-page .rubrica-filter-panel button.rubrica-scroll-letter-active {
         background: rgb(3 105 161) !important;
         border-color: rgb(3 105 161) !important;
         color: white !important;
       }
-      .rubrica-master-page > div > div:nth-child(2) button.rubrica-scroll-tutti-inactive {
+      .rubrica-master-page .rubrica-filter-panel button.rubrica-scroll-tutti-inactive {
         background: white !important;
         border-color: rgb(125 211 252) !important;
         color: rgb(3 105 161) !important;
       }
 
       /* Scorrimento gestito dal contenitore principale, senza altezza zero. */
-      .rubrica-master-page > div.rubrica-scroll-layout {
-        height: 100% !important;
-        min-height: 0 !important;
-        overflow: hidden !important;
-      }
-      .rubrica-master-page > div > div.rubrica-contact-scroll,
-      .rubrica-master-page > div > div.space-y-6 {
-        min-height: 0 !important;
-        flex: 1 1 0% !important;
-        height: 0 !important;
+      .rubrica-master-page .rubrica-contact-scroll {
         display: block !important;
+        min-height: 0 !important;
+        height: auto !important;
+        flex: none !important;
         margin: 0 !important;
-        overflow-y: scroll !important;
-        overflow-x: hidden !important;
-        scrollbar-gutter: stable;
-        overscroll-behavior-y: contain;
+        overflow: visible !important;
         padding: 10px 14px 18px !important;
         border: 1px solid rgb(186 230 253);
         border-radius: 8px;
         background: white !important;
       }
-      .rubrica-master-page > div > div.space-y-6 > div {
+      .rubrica-master-page .rubrica-contact-scroll > div {
         width: 100% !important;
         height: auto !important;
         margin: 0 0 12px 0 !important;
@@ -250,19 +255,19 @@ export function RubricaMasterGraficaEnhancer() {
         box-shadow: 0 1px 2px rgb(15 23 42 / .06) !important;
         background: white !important;
       }
-      .rubrica-master-page > div > div.space-y-6 > div:last-child { margin-bottom: 0 !important; }
+      .rubrica-master-page .rubrica-contact-scroll > div:last-child { margin-bottom: 0 !important; }
       .rubrica-master-page .rubrica-letter-header-hidden { display: none !important; }
-      .rubrica-master-page > div > div.space-y-6 > div > div:nth-child(2) > div {
+      .rubrica-master-page .rubrica-contact-scroll > div > div:nth-child(2) > div {
         padding: 8px 12px !important;
         min-height: 52px;
         border-color: rgb(226 232 240) !important;
       }
-      .rubrica-master-page > div > div.space-y-6 > div > div:nth-child(2) > div:hover { background: rgb(240 249 255) !important; }
-      .rubrica-master-page > div > div.space-y-6 .text-xl { font-size: .9rem !important; line-height: 1.25rem !important; }
-      .rubrica-master-page > div > div.space-y-6 .text-base { font-size: .75rem !important; line-height: 1rem !important; }
-      .rubrica-master-page > div > div.space-y-6 svg { width: 15px !important; height: 15px !important; }
-      .rubrica-master-page > div > div.space-y-6 .bg-red-100 { background: rgb(254 242 242) !important; }
-      .rubrica-master-page > div > div.space-y-6 .bg-red-600 { background: rgb(220 38 38) !important; }
+      .rubrica-master-page .rubrica-contact-scroll > div > div:nth-child(2) > div:hover { background: rgb(240 249 255) !important; }
+      .rubrica-master-page .rubrica-contact-scroll .text-xl { font-size: .9rem !important; line-height: 1.25rem !important; }
+      .rubrica-master-page .rubrica-contact-scroll .text-base { font-size: .75rem !important; line-height: 1rem !important; }
+      .rubrica-master-page .rubrica-contact-scroll svg { width: 15px !important; height: 15px !important; }
+      .rubrica-master-page .rubrica-contact-scroll .bg-red-100 { background: rgb(254 242 242) !important; }
+      .rubrica-master-page .rubrica-contact-scroll .bg-red-600 { background: rgb(220 38 38) !important; }
 
       body.master-grafica-rubrica [role="dialog"] {
         width: min(96vw, 1120px) !important;
