@@ -54,7 +54,8 @@ indirizzo: body.indirizzo || null,
 citta: body.citta || null,
 provincia: body.provincia || null,
 cap: body.cap || null,
-tipo_cliente: body.tipo_cliente || "Persona fisica",
+// Valori ammessi da tbclienti_tipo_cliente_check: Persona fisica / Altro.
+tipo_cliente: body.tipo_cliente === "Persona fisica" ? "Persona fisica" : "Altro",
 tipologia_cliente:
   body.tipologia_cliente ||
   body.tipo_cliente ||
