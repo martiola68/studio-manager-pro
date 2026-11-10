@@ -117,7 +117,7 @@ export function RubricaMasterGraficaEnhancer() {
       .rubrica-master-page > div {
         width: 100% !important;
         max-width: none !important;
-        height: auto !important;
+        height: 100% !important;
         min-height: 0;
         padding-top: 12px !important;
         padding-bottom: 12px !important;
@@ -185,6 +185,29 @@ export function RubricaMasterGraficaEnhancer() {
         width: 52px !important;
         min-width: 52px !important;
       }
+      /* Tutte le lettere su una riga, sfruttando quasi tutta la larghezza disponibile. */
+      .rubrica-master-page .rubrica-alphabet-row {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 4px !important;
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: thin;
+        padding-bottom: 3px;
+      }
+      .rubrica-master-page .rubrica-alphabet-row button {
+        flex: 1 0 33px !important;
+        min-width: 33px !important;
+        width: auto !important;
+        height: 36px !important;
+        font-size: .8rem !important;
+      }
+      .rubrica-master-page .rubrica-alphabet-row button:first-child {
+        flex: 1.5 0 56px !important;
+        min-width: 56px !important;
+        width: auto !important;
+      }
       .rubrica-master-page > div > div:nth-child(2) button.rubrica-scroll-letter-active {
         background: rgb(3 105 161) !important;
         border-color: rgb(3 105 161) !important;
@@ -198,19 +221,21 @@ export function RubricaMasterGraficaEnhancer() {
 
       /* Scorrimento gestito dal contenitore principale, senza altezza zero. */
       .rubrica-master-page > div.rubrica-scroll-layout {
-        height: auto !important;
-        min-height: 100% !important;
-        overflow: visible !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
       }
       .rubrica-master-page > div > div.rubrica-contact-scroll,
       .rubrica-master-page > div > div.space-y-6 {
         min-height: 0 !important;
-        flex: 0 0 auto !important;
-        height: auto !important;
+        flex: 1 1 0% !important;
+        height: 0 !important;
         display: block !important;
         margin: 0 !important;
-        overflow-y: visible !important;
-        overflow-x: visible !important;
+        overflow-y: scroll !important;
+        overflow-x: hidden !important;
+        scrollbar-gutter: stable;
+        overscroll-behavior-y: contain;
         padding: 10px 14px 18px !important;
         border: 1px solid rgb(186 230 253);
         border-radius: 8px;
