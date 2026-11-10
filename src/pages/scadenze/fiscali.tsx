@@ -100,6 +100,7 @@ const [emailBozzaErrore,setEmailBozzaErrore]=useState("");
 const [emailDataMancante,setEmailDataMancante]=useState(false);
 const [emailDataManuale,setEmailDataManuale]=useState("");
 const [emailMaggiorataManuale,setEmailMaggiorataManuale]=useState("");
+const [emailDataFonte,setEmailDataFonte]=useState("");
 const [searchContatti, setSearchContatti] = useState("");
 const [emailContatti, setEmailContatti] = useState<
   {
@@ -485,7 +486,7 @@ return rows.map((r) => {
 };
 
  const preparaBozzaFiscali=async(scadenza:ScadenzaFiscali,tipo:TipoEmailFiscali,dateManuali?:{ordinaria:string;maggiorata:string})=>{
-   setEmailBozzaLoading(true);setEmailBozzaErrore("");setEmailDataMancante(false);
+   setEmailBozzaLoading(true);setEmailBozzaErrore("");setEmailDataMancante(false);setEmailDataFonte("");
    try{
      const codice=tipo==="saldo_primo_acconto_cciaa"?"FISCALI_SALDO_PRIMO_ACCONTO_CCIAA":"FISCALI_SECONDO_ACCONTO";
      const {data,error}=await (supabase as any).from("tbemail_template").select("oggetto,corpo").eq("codice",codice).eq("attivo",true).maybeSingle();
@@ -507,9 +508,23 @@ return rows.map((r) => {
        }catch(e:any){
          const descrizione=String(e?.message||"");
          if(!/Data di pagamento non trovata|manca la data con maggiorazione/i.test(descrizione))throw e;
-         setEmailDataMancante(true);
-         throw Error(descrizione+
-           " Inserisci le date verificate qui sotto per questa sola comunicazione.");
+         const anno=Number(scadenza.anno_riferimento||annoConsultazione);
+         // Scadenze storiche 2026 verificate sullo Scadenzario Agenzia delle Entrate.
+         // NON sottrarre un anno alle scadenze 2027: le proroghe cambiano.
+         if(anno===2026){
+           if(tipo==="secondo_acconto"){
+             dates={dataScadenza:"30/11/2026",dataScadenzaMaggiorata:""};
+           }else if(scadenza.soggetto_isa){
+             dates={dataScadenza:"20/07/2026",dataScadenzaMaggiorata:"20/08/2026"};
+           }else{
+             dates={dataScadenza:"30/06/2026",dataScadenzaMaggiorata:"30/07/2026"};
+           }
+           setEmailDataFonte("Termini generali 2026 verificati dall'Agenzia delle Entrate: controlla le eventuali scadenze particolari del cliente prima dell'invio.");
+         }else{
+           setEmailDataMancante(true);
+           throw Error(descrizione+
+             " Inserisci le date verificate qui sotto per questa sola comunicazione.");
+         }
        }
      }
      const vars:Record<string,string>={CLIENTE:scadenza.nominativo||"Cliente",ANNO:String(scadenza.anno_riferimento||new Date().getFullYear()),DATA_SCADENZA:dates.dataScadenza,DATA_SCADENZA_MAGGIORATA:dates.dataScadenzaMaggiorata,TIPO_FISCALE:tipo==="saldo_primo_acconto_cciaa"?"Saldo / 1° acconto / CCIAA":"2° acconto",FIRMA_UTENTE:`${utenteLoggato?.nome||""} ${utenteLoggato?.cognome||""}`.trim()};
@@ -1527,6 +1542,7 @@ const inviaEmailFiscali = async () => {
                 <p className="mt-1 text-xs text-gray-500">Puoi integrare il testo senza cambiare il modello originale.</p>
               </div>
               {emailBozzaLoading&&<p className="text-sm text-blue-700">Preparazione messaggio...</p>}
+              {emailDataFonte&&<p role="status" className="rounded-lg border-2 border-sky-300 bg-sky-50 p-3 text-sm text-sky-900">{emailDataFonte}</p>}
               {emailBozzaErrore&&<div role="alert" className="rounded-lg border-2 border-amber-400 bg-amber-50 p-3 text-sm text-amber-900">{emailBozzaErrore}</div>}
               {emailDataMancante&&(
                 <div className="space-y-3 rounded-lg border-2 border-sky-400 bg-sky-50 p-4">
