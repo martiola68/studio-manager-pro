@@ -102,7 +102,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const isMasterGraficaAnagrafiche = ANAGRAFICHE_MASTER_ROUTES.has(router.pathname);
   const isAnagraficheScrollPage = isMasterGraficaAnagrafiche;
   const isMasterGraficaImpostazioni = IMPOSTAZIONI_MASTER_ROUTES.has(router.pathname);
-  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne ||  isMasterGraficaVariazioni || isMasterGraficaPayroll || isContenziosoScrollPage || isMasterGraficaAntiriciclaggio || isMasterGraficaAnagrafiche || isMasterGraficaImpostazioni;
+  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni || isMasterGraficaPayroll || isContenziosoScrollPage || isMasterGraficaAntiriciclaggio || isMasterGraficaAnagrafiche || isMasterGraficaImpostazioni;
 
   useEffect(() => {
     document.body.classList.toggle("master-grafica-promemoria", isMasterGraficaPromemoria);
@@ -150,7 +150,7 @@ export default function App({ Component, pageProps }: AppProps) {
     isOperationalScadenzario ? "!min-h-0 !overflow-hidden" : "", isMasterGraficaPromemoria ? "promemoria-master-page !min-h-0 !overflow-hidden" : "", isMasterGraficaAgenda ? "agenda-master-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaCalendario ? "calendario-master-page" : "", isMasterGraficaCassettiFiscali ? "cassetti-fiscali-master-page !min-h-0 !overflow-hidden" : "", isMasterGraficaAccessoPortali ? "accesso-portali-master-page !min-h-0 !overflow-hidden" : "",
     isMasterGraficaComunicazioniClienti ? "comunicazioni-clienti-master-page !min-h-0 !overflow-hidden" : "", isMasterGraficaComunicazioniInterne ? "comunicazioni-interne-master-page !min-h-0 !overflow-hidden" : "",
-    isMasterGraficaRubrica ? "rubrica-master-page !min-h-0 !overflow-y-auto" : "", isMasterGraficaVariazioni ? "variazioni-master-page !min-h-0 !overflow-hidden" : "", isMasterGraficaDocumenti ? "pratiche-documenti-master-page" : "",
+    isMasterGraficaRubrica ? "rubrica-master-page !min-h-0 !overflow-hidden" : "", isMasterGraficaVariazioni ? "variazioni-master-page !min-h-0 !overflow-hidden" : "", isMasterGraficaDocumenti ? "pratiche-documenti-master-page" : "",
   ].filter(Boolean).join(" ");
 
   const pageContent = isScadenzarioPage && scadenzariCleanupPending ? <div className="flex min-h-[240px] items-center justify-center text-sm text-gray-500">Aggiornamento scadenzari...</div> : <Component {...pageProps} />;
