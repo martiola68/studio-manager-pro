@@ -1085,7 +1085,7 @@ soggetto_estero: nuovoNominativo.soggetto_estero,
 tipo_cliente:
   nominativoPersonaFisica
     ? "Persona fisica"
-    : "Società",
+    : "Altro",
 
 tipologia_cliente:
   nominativoPersonaFisica
@@ -1960,9 +1960,9 @@ function getTipoRuolo(ruolo: string) {
       nominativo.cap || "",
 
     tipologia_cliente:
-      nominativo.tipo_cliente ||
-      nominativo.tipologia_cliente ||
-      "Persona fisica",
+      nominativo.tipo_cliente === "Persona fisica"
+        ? "Persona fisica"
+        : "Altro",
   });
 
     const codiceFiscale =
