@@ -93,6 +93,10 @@ export default function ScadenzeFiscaliPage() {
 
 const [emailDestinatario, setEmailDestinatario] = useState("");
 const [emailCc, setEmailCc] = useState("");
+const [emailOggetto,setEmailOggetto]=useState("");
+const [emailMessaggio,setEmailMessaggio]=useState("");
+const [emailBozzaLoading,setEmailBozzaLoading]=useState(false);
+const [emailBozzaErrore,setEmailBozzaErrore]=useState("");
 const [searchContatti, setSearchContatti] = useState("");
 const [emailContatti, setEmailContatti] = useState<
   {
@@ -477,23 +481,26 @@ return rows.map((r) => {
   }
 };
 
- const apriInvioEmail = (
-  scadenza: ScadenzaFiscali,
-  tipo: TipoEmailFiscali
-) => {
-  setEmailModal({
-    open: true,
-    sending: false,
-    scadenza,
-    tipo,
-  });
-
-  setEmailDestinatario("");
-  setEmailCc("");
-  setSearchContatti("");
-  setEmailContatti([]);
-  setF24File(null);
-};
+ const preparaBozzaFiscali=async(scadenza:ScadenzaFiscali,tipo:TipoEmailFiscali)=>{
+   setEmailBozzaLoading(true);setEmailBozzaErrore("");
+   try{
+     const codice=tipo==="saldo_primo_acconto_cciaa"?"FISCALI_SALDO_PRIMO_ACCONTO_CCIAA":"FISCALI_SECONDO_ACCONTO";
+     const {data,error}=await (supabase as any).from("tbemail_template").select("oggetto,corpo").eq("codice",codice).eq("attivo",true).maybeSingle();
+     if(error)throw error;if(!data)throw Error("Template "+codice+" non trovato");
+     const studioId=await studioService.getStudioId();
+     const dates=resolveEmailScadenza(await tipoScadenzaService.getAttivi(studioId),tipo==="saldo_primo_acconto_cciaa"?"fiscali_saldo_primo_acconto_cciaa":"fiscali_secondo_acconto",Number(scadenza.anno_riferimento||annoConsultazione),!!scadenza.soggetto_isa,tipo==="saldo_primo_acconto_cciaa");
+     const vars:Record<string,string>={CLIENTE:scadenza.nominativo||"Cliente",ANNO:String(scadenza.anno_riferimento||new Date().getFullYear()),DATA_SCADENZA:dates.dataScadenza,DATA_SCADENZA_MAGGIORATA:dates.dataScadenzaMaggiorata,TIPO_FISCALE:tipo==="saldo_primo_acconto_cciaa"?"Saldo / 1° acconto / CCIAA":"2° acconto",FIRMA_UTENTE:`${utenteLoggato?.nome||""} ${utenteLoggato?.cognome||""}`.trim()};
+     const fill=(str:string)=>Object.entries(vars).reduce((s,[k,v])=>s.replaceAll(`[${k}]`,v||""),str||"");
+     setEmailOggetto(fill(data.oggetto));setEmailMessaggio(fill(data.corpo));
+   }catch(e:any){setEmailBozzaErrore(e?.message||"Impossibile caricare la bozza");}
+   finally{setEmailBozzaLoading(false);}
+ };
+ const apriInvioEmail=(scadenza:ScadenzaFiscali,tipo:TipoEmailFiscali)=>{
+   setEmailModal({open:true,sending:false,scadenza,tipo});
+   setEmailDestinatario("");setEmailCc("");setEmailOggetto("");setEmailMessaggio("");
+   setEmailBozzaErrore("");setSearchContatti("");setEmailContatti([]);setF24File(null);
+   void preparaBozzaFiscali(scadenza,tipo);
+ };
 
   const loadContattiDestinatari = async (term: string) => {
   let query = supabase
@@ -563,56 +570,16 @@ const inviaEmailFiscali = async () => {
       return;
     }
 
+    if(emailBozzaLoading||emailBozzaErrore||!emailOggetto.trim()||!emailMessaggio.trim()){
+      toast({title:"Bozza email non pronta",description:emailBozzaErrore||"Oggetto e messaggio obbligatori",variant:"destructive"});
+      return;
+    }
     setEmailModal((prev) => ({ ...prev, sending: true }));
 
-    const scadenza = emailModal.scadenza;
-
-    const templateCode =
-      emailModal.tipo === "saldo_primo_acconto_cciaa"
-        ? "FISCALI_SALDO_PRIMO_ACCONTO_CCIAA"
-        : "FISCALI_SECONDO_ACCONTO";
-
-    const { data: template, error: templateError } = await (supabase as any)
-      .from("tbemail_template")
-      .select("oggetto, corpo")
-      .eq("codice", templateCode)
-      .eq("attivo", true)
-      .maybeSingle();
-
-    if (templateError) throw templateError;
-    if (!template) throw new Error(`Template ${templateCode} non trovato`);
-
-const studioId = await studioService.getStudioId();
-const dates = resolveEmailScadenza(await tipoScadenzaService.getAttivi(studioId), emailModal.tipo === "saldo_primo_acconto_cciaa" ? "fiscali_saldo_primo_acconto_cciaa" : "fiscali_secondo_acconto", Number(scadenza.anno_riferimento || annoConsultazione), !!scadenza.soggetto_isa, emailModal.tipo === "saldo_primo_acconto_cciaa");
-const firmaUtente = `${utenteLoggato?.nome || ""} ${
-  utenteLoggato?.cognome || ""
-}`.trim();
-
-const vars: Record<string, string> = {
-  CLIENTE: scadenza.nominativo || "Cliente",
-  ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
-
-  DATA_SCADENZA: dates.dataScadenza,
-  DATA_SCADENZA_MAGGIORATA: dates.dataScadenzaMaggiorata,
-  TIPO_FISCALE:
-    emailModal.tipo === "saldo_primo_acconto_cciaa"
-      ? "Saldo / 1° acconto / CCIAA"
-      : "2° acconto",
-
-  FIRMA_UTENTE: firmaUtente,
-};
-
-    const replaceVars = (text: string) => {
-      let output = text || "";
-      Object.entries(vars).forEach(([key, value]) => {
-        output = output.replaceAll(`[${key}]`, value || "");
-      });
-      return output;
-    };
-
-    const oggetto = replaceVars(template.oggetto);
-    const messaggio = replaceVars(template.corpo);
-
+    const scadenza=emailModal.scadenza;
+    const oggetto=emailOggetto.trim();
+    const messaggio=emailMessaggio.trim();
+    if(!oggetto||!messaggio)throw Error("Inserisci oggetto e messaggio prima di inviare.");
     const safeName = f24File.name.replace(/[^\w.\-]+/g, "_");
     const fileName = `${Date.now()}_${safeName}`;
     const filePath = `comunicazioni/${fileName}`;
@@ -1436,8 +1403,8 @@ const vars: Record<string, string> = {
       </Card>
 
       {emailModal.open && emailModal.scadenza && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3">
+          <div className="w-full max-w-3xl max-h-[94vh] overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
             <h2 className="text-xl font-bold mb-2">
               Invia F24 Fiscali{" "}
               {emailModal.tipo === "saldo_primo_acconto_cciaa"
@@ -1511,6 +1478,17 @@ const vars: Record<string, string> = {
 
               <div className="mb-3"><label className="text-sm font-medium mb-2 block">CC · indirizzi in copia (facoltativo)</label><Input type="text" value={emailCc} onChange={e=>setEmailCc(e.target.value)} placeholder="email1@esempio.it; email2@esempio.it"/><p className="mt-1 text-xs text-gray-500">Separa più indirizzi con virgola o punto e virgola.</p></div>
               <div>
+                <label className="text-sm font-medium mb-2 block">Oggetto dell'email *</label>
+                <Input value={emailOggetto} onChange={e=>setEmailOggetto(e.target.value)} disabled={emailModal.sending||emailBozzaLoading}/>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Messaggio modificabile prima dell'invio *</label>
+                <Textarea value={emailMessaggio} onChange={e=>setEmailMessaggio(e.target.value)} rows={9} className="min-h-[190px] resize-y" disabled={emailModal.sending||emailBozzaLoading}/>
+                <p className="mt-1 text-xs text-gray-500">Puoi integrare il testo senza cambiare il modello originale.</p>
+              </div>
+              {emailBozzaLoading&&<p className="text-sm text-blue-700">Preparazione messaggio...</p>}
+              {emailBozzaErrore&&<p role="alert" className="text-sm text-red-700">{emailBozzaErrore}</p>}
+              <div>
                 <label className="text-sm font-medium mb-2 block">
                   Allegato F24 *
                 </label>
@@ -1550,7 +1528,7 @@ const vars: Record<string, string> = {
                 <Button
                   type="button"
                   onClick={inviaEmailFiscali}
-                  disabled={emailModal.sending || !emailDestinatario}
+                  disabled={emailModal.sending||emailBozzaLoading||!!emailBozzaErrore||!emailDestinatario||!f24File||!emailOggetto.trim()||!emailMessaggio.trim()}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   {emailModal.sending ? "Invio..." : "Invia email"}
