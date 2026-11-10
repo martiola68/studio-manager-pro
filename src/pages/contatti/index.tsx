@@ -1277,7 +1277,7 @@ const mostraVistaSocieta =
   }
 
   return (
-    <div className="rubrica-scroll-layout max-w-7xl mx-auto p-4 md:p-8">
+    <div className="rubrica-scroll-layout w-full max-w-none p-3 md:p-4">
       <div className="mb-6 md:mb-8 sticky top-20 z-40 bg-white px-6 pt-4 pb-4 rounded-t-lg border border-b-0">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -1871,7 +1871,7 @@ const mostraVistaSocieta =
             />
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="rubrica-alphabet-row flex flex-nowrap gap-1">
            <Button
   variant="outline"
   size="sm"
