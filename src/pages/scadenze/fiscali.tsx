@@ -505,15 +505,17 @@ return rows.map((r) => {
            Number(scadenza.anno_riferimento||annoConsultazione),!!scadenza.soggetto_isa,
            tipo==="saldo_primo_acconto_cciaa");
        }catch(e:any){
+         const descrizione=String(e?.message||"");
+         if(!/Data di pagamento non trovata|manca la data con maggiorazione/i.test(descrizione))throw e;
          setEmailDataMancante(true);
-         throw Error((e?.message||"Data fiscale non trovata")+
+         throw Error(descrizione+
            " Inserisci le date verificate qui sotto per questa sola comunicazione.");
        }
      }
      const vars:Record<string,string>={CLIENTE:scadenza.nominativo||"Cliente",ANNO:String(scadenza.anno_riferimento||new Date().getFullYear()),DATA_SCADENZA:dates.dataScadenza,DATA_SCADENZA_MAGGIORATA:dates.dataScadenzaMaggiorata,TIPO_FISCALE:tipo==="saldo_primo_acconto_cciaa"?"Saldo / 1° acconto / CCIAA":"2° acconto",FIRMA_UTENTE:`${utenteLoggato?.nome||""} ${utenteLoggato?.cognome||""}`.trim()};
      const fill=(str:string)=>Object.entries(vars).reduce((s,[k,v])=>s.replaceAll(`[${k}]`,v||""),str||"");
      setEmailOggetto(fill(data.oggetto));setEmailMessaggio(fill(data.corpo));setEmailDataMancante(false);
-   }catch(e:any){setEmailBozzaErrore(e?.message||"Impossibile caricare la bozza");}
+   }catch(e:any){if(dateManuali)setEmailDataMancante(true);setEmailBozzaErrore(e?.message||"Impossibile caricare la bozza");}
    finally{setEmailBozzaLoading(false);}
  };
  const apriInvioEmail=(scadenza:ScadenzaFiscali,tipo:TipoEmailFiscali)=>{
