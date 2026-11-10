@@ -1278,7 +1278,8 @@ const mostraVistaSocieta =
 
   return (
     <div className="rubrica-scroll-layout w-full max-w-none p-3 md:p-4">
-      <div className="mb-6 md:mb-8 sticky top-20 z-40 bg-white px-6 pt-4 pb-4 rounded-t-lg border border-b-0">
+      <div className="rubrica-sticky-controls">
+      <div className="rubrica-page-heading mb-3 bg-white px-6 pt-4 pb-4 rounded-t-lg border border-b-0">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
            <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
@@ -1854,7 +1855,7 @@ const mostraVistaSocieta =
         </div>
       </div>
 
-      <Card className="mb-6">
+      <Card className="rubrica-filter-panel mb-3">
         <CardHeader>
           <CardTitle className="text-base md:text-lg">
             Ricerca e Filtri
@@ -1902,6 +1903,7 @@ const mostraVistaSocieta =
           </div>
         </CardContent>
       </Card>
+      </div>
 
 <div className="rubrica-contact-scroll space-y-6">
   {mostraVistaSocieta ? (
