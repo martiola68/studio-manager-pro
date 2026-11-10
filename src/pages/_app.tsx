@@ -102,7 +102,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const isMasterGraficaAnagrafiche = ANAGRAFICHE_MASTER_ROUTES.has(router.pathname);
   const isAnagraficheScrollPage = isMasterGraficaAnagrafiche;
   const isMasterGraficaImpostazioni = IMPOSTAZIONI_MASTER_ROUTES.has(router.pathname);
-  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaVariazioni || isMasterGraficaPayroll || isContenziosoScrollPage || isMasterGraficaAntiriciclaggio || isMasterGraficaAnagrafiche || isMasterGraficaImpostazioni;
+  const isFixedViewportPage = isOperationalScadenzario || isMasterGraficaPromemoria || isMasterGraficaAgenda || isMasterGraficaCassettiFiscali || isMasterGraficaAccessoPortali || isMasterGraficaComunicazioniClienti || isMasterGraficaComunicazioniInterne || isMasterGraficaRubrica || isMasterGraficaVariazioni || isMasterGraficaPayroll || isContenziosoScrollPage || isMasterGraficaAntiriciclaggio || isMasterGraficaAnagrafiche || isMasterGraficaImpostazioni;
 
   useEffect(() => {
     document.body.classList.toggle("master-grafica-promemoria", isMasterGraficaPromemoria);
