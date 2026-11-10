@@ -117,7 +117,7 @@ export function RubricaMasterGraficaEnhancer() {
       .rubrica-master-page > div {
         width: 100% !important;
         max-width: none !important;
-        height: 100%;
+        height: auto !important;
         min-height: 0;
         padding-top: 12px !important;
         padding-bottom: 12px !important;
@@ -196,23 +196,21 @@ export function RubricaMasterGraficaEnhancer() {
         color: rgb(3 105 161) !important;
       }
 
-      /* L'area contatti è lo scroll container della rubrica: altezza vincolata e barra sempre accessibile. */
+      /* Scorrimento gestito dal contenitore principale, senza altezza zero. */
       .rubrica-master-page > div.rubrica-scroll-layout {
-        height: 100% !important;
-        min-height: 0 !important;
-        overflow: hidden !important;
+        height: auto !important;
+        min-height: 100% !important;
+        overflow: visible !important;
       }
       .rubrica-master-page > div > div.rubrica-contact-scroll,
       .rubrica-master-page > div > div.space-y-6 {
         min-height: 0 !important;
-        flex: 1 1 0% !important;
-        height: 0 !important;
+        flex: 0 0 auto !important;
+        height: auto !important;
         display: block !important;
         margin: 0 !important;
-        overflow-y: scroll !important;
-        overscroll-behavior-y: contain;
-        scrollbar-width: auto;
-        overflow-x: hidden !important;
+        overflow-y: visible !important;
+        overflow-x: visible !important;
         padding: 10px 14px 18px !important;
         border: 1px solid rgb(186 230 253);
         border-radius: 8px;
