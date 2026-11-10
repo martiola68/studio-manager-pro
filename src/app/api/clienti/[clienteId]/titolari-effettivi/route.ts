@@ -288,95 +288,57 @@ export async function GET(
      * servono per ricostruire i percorsi
      * societari diretti e indiretti.
      */
+    // Supabase limita il numero di righe restituite per singola richiesta.
+    // Il calcolo TE deve leggere tutte le anagrafiche e partecipazioni,
+    // non solamente la prima pagina (altrimenti i soci spariscono dal grafo).
+    async function leggiTutteLeRighe(creaQuery: () => any) {
+      const tutte: any[] = [];
+      const dimensionePagina = 500;
+      for (let pagina = 0; pagina < 200; pagina += 1) {
+        const inizio = pagina * dimensionePagina;
+        const { data, error } = await creaQuery().range(
+          inizio, inizio + dimensionePagina - 1
+        );
+        if (error) throw error;
+        const righe = data || [];
+        tutte.push(...righe);
+        if (righe.length < dimensionePagina) return tutte;
+      }
+      throw new Error("Archivio troppo grande per la verifica TE: paginazione incompleta.");
+    }
+
     const [
       clienteRes,
-      clientiRes,
-      partecipazioniRes,
-      organiResidualRes,
+      clienti,
+      partecipazioni,
+      organiResidual,
     ] = await Promise.all([
       supabase
         .from("tbclienti")
-        .select(`
-          id,
-          ragione_sociale,
-          codice_fiscale,
-          partita_iva,
-          tipo_cliente,
-          cliente
-        `)
+        .select("id,ragione_sociale,codice_fiscale,partita_iva,tipo_cliente,cliente")
         .eq("id", clienteId)
         .maybeSingle(),
-
-      supabase
-        .from("tbclienti")
-        .select(`
-          id,
-          ragione_sociale,
-          codice_fiscale,
-          partita_iva,
-          tipo_cliente,
-          cliente
-        `),
-
-      /*
-       * Non filtriamo solo attivo=true:
-       * per il calcolo storico servono anche
-       * le partecipazioni cessate.
-       */
-      supabase
-        .from("tbclienti_organi")
-        .select(`
-          id,
-          cliente_id,
-          soggetto_cliente_id,
-          percentuale_partecipazione,
-          tipo_soggetto,
-          ruolo,
-          attivo,
-          data_nomina,
-          data_scadenza,
-          data_cessazione
-        `)
-        .eq("ruolo", "socio")
-        .not(
-          "soggetto_cliente_id",
-          "is",
-          null
-        )
-        .not(
-          "cliente_id",
-          "is",
-          null
-        ),
-
-      supabase
-        .from("tbclienti_organi")
-        .select(`
-          id,
-          cliente_id,
-          soggetto_cliente_id,
-          ruolo,
-          carica,
-          principale,
-          attivo,
-          data_nomina,
-          data_scadenza,
-          data_cessazione
-        `)
-        .in(
-          "ruolo",
-          RUOLI_RESIDUALI
-        )
-        .not(
-          "soggetto_cliente_id",
-          "is",
-          null
-        )
-        .not(
-          "cliente_id",
-          "is",
-          null
-        ),
+      leggiTutteLeRighe(() =>
+        supabase.from("tbclienti")
+          .select("id,ragione_sociale,codice_fiscale,partita_iva,tipo_cliente,cliente")
+          .order("id")
+      ),
+      leggiTutteLeRighe(() =>
+        supabase.from("tbclienti_organi")
+          .select("id,cliente_id,soggetto_cliente_id,percentuale_partecipazione,tipo_soggetto,ruolo,attivo,data_nomina,data_scadenza,data_cessazione")
+          .eq("ruolo", "socio")
+          .not("soggetto_cliente_id", "is", null)
+          .not("cliente_id", "is", null)
+          .order("id")
+      ),
+      leggiTutteLeRighe(() =>
+        supabase.from("tbclienti_organi")
+          .select("id,cliente_id,soggetto_cliente_id,ruolo,carica,principale,attivo,data_nomina,data_scadenza,data_cessazione")
+          .in("ruolo", RUOLI_RESIDUALI)
+          .not("soggetto_cliente_id", "is", null)
+          .not("cliente_id", "is", null)
+          .order("id")
+      ),
     ]);
 
     if (clienteRes.error) {
@@ -394,32 +356,7 @@ export async function GET(
       );
     }
 
-    if (clientiRes.error) {
-      throw clientiRes.error;
-    }
-
-    if (partecipazioniRes.error) {
-      throw partecipazioniRes.error;
-    }
-
-    if (organiResidualRes.error) {
-      throw organiResidualRes.error;
-    }
-
-    const cliente =
-      clienteRes.data as ClienteRow;
-
-    const clienti =
-      (clientiRes.data ||
-        []) as ClienteRow[];
-
-    const partecipazioni =
-      (partecipazioniRes.data ||
-        []) as PartecipazioneRow[];
-
-    const organiResidual =
-      (organiResidualRes.data ||
-        []) as OrganoResidualRow[];
+    const cliente = clienteRes.data as ClienteRow;
 
     const clientiMap = new Map<
       string,
