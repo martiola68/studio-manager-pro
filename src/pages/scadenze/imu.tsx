@@ -75,6 +75,12 @@ export default function ImuPage() {
 
   const [emailDestinatario, setEmailDestinatario] = useState("");
 const [emailCc, setEmailCc] = useState("");
+  const [emailOggetto,setEmailOggetto]=useState("");
+  const [emailMessaggio,setEmailMessaggio]=useState("");
+  const [emailBozzaLoading,setEmailBozzaLoading]=useState(false);
+  const [emailBozzaErrore,setEmailBozzaErrore]=useState("");
+  const [emailDataManuale,setEmailDataManuale]=useState("");
+  const [emailDataMancante,setEmailDataMancante]=useState(false);
   const [searchContatti, setSearchContatti] = useState("");
 
   const [emailContatti, setEmailContatti] = useState<
@@ -524,34 +530,62 @@ const [emailCc, setEmailCc] = useState("");
     return fullName || contatto.email || "Contatto";
   };
 
-  const apriInvioEmail = (
-    scadenza: ScadenzaImu,
-    tipo: "acconto" | "saldo"
-  ) => {
-    setInvioEmailModal({
-      open: true,
-      scadenza,
-      tipo,
-    });
-
-    setEmailDestinatario("");
-  setEmailCc("");
-    setSearchContatti("");
-    setEmailContatti([]);
+  const preparaBozzaImu=async(scadenza:ScadenzaImu,tipo:"acconto"|"saldo",dataManuale?:string)=>{
+    setEmailBozzaLoading(true);setEmailBozzaErrore("");setEmailDataMancante(false);
+    try {
+      const templateCode=tipo==="acconto"?"IMU_ACCONTO":"IMU_SALDO";
+      const {data:template,error}=await (supabase as any).from("tbemail_template")
+        .select("oggetto,corpo").eq("codice",templateCode).eq("attivo",true).maybeSingle();
+      if(error)throw error;
+      if(!template)throw Error("Template "+templateCode+" non trovato");
+      let dateScadenza:string;
+      if(dataManuale){
+        const d=new Date(dataManuale+"T00:00:00Z");
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(dataManuale)||Number.isNaN(d.getTime())||d.toISOString().slice(0,10)!==dataManuale)
+          throw Error("Data di scadenza non valida");
+        dateScadenza=dataManuale.slice(8,10)+"/"+dataManuale.slice(5,7)+"/"+dataManuale.slice(0,4);
+      }else{
+        try{
+          const studioId=await studioService.getStudioId();
+          const date=resolveEmailScadenza(await tipoScadenzaService.getAttivi(studioId),
+            tipo==="acconto"?"imu_acconto":"imu_saldo",Number(scadenza.anno_riferimento||new Date().getFullYear()));
+          dateScadenza=date.dataScadenza;
+        }catch(e:any){
+          if(!/Data di pagamento non trovata|manca la data con maggiorazione/i.test(String(e?.message||"")))throw e;
+          setEmailDataMancante(true);
+          throw Error((e?.message||"Scadenza IMU non disponibile")+
+            " Inserisci la scadenza verificata qui sotto per preparare questa comunicazione.");
+        }
+      }
+      const vars:Record<string,string>={
+        CLIENTE:scadenza.nominativo||"Cliente",
+        ANNO:String(scadenza.anno_riferimento||new Date().getFullYear()),
+        DATA_SCADENZA:dateScadenza,
+        TIPO_IMU:tipo==="acconto"?"Acconto":"Saldo",
+        FIRMA_UTENTE:`${utenteLoggato?.nome||""} ${utenteLoggato?.cognome||""}`.trim(),
+      };
+      const fill=(s:string)=>Object.entries(vars).reduce((acc,[key,value])=>acc.replaceAll(`[${key}]`,value),s||"");
+      setEmailOggetto(fill(template.oggetto));setEmailMessaggio(fill(template.corpo));
+      setEmailDataMancante(false);
+    }catch(e:any){
+      if(dataManuale)setEmailDataMancante(true);
+      setEmailBozzaErrore(e?.message||"Impossibile preparare la bozza IMU");
+    }finally{setEmailBozzaLoading(false);}
   };
 
-  const chiudiInvioEmail = () => {
-    setInvioEmailModal({
-      open: false,
-      scadenza: null,
-      tipo: null,
-    });
+  const apriInvioEmail=(scadenza:ScadenzaImu,tipo:"acconto"|"saldo")=>{
+    setInvioEmailModal({open:true,scadenza,tipo});
+    setEmailDestinatario("");setEmailCc("");setSearchContatti("");setEmailContatti([]);
+    setEmailOggetto("");setEmailMessaggio("");setEmailBozzaErrore("");
+    setEmailDataManuale("");setEmailDataMancante(false);setF24File(null);
+    void preparaBozzaImu(scadenza,tipo);
+  };
 
-    setEmailDestinatario("");
-  setEmailCc("");
-    setSearchContatti("");
-    setEmailContatti([]);
-    setF24File(null);
+  const chiudiInvioEmail=()=>{
+    setInvioEmailModal({open:false,scadenza:null,tipo:null});
+    setEmailDestinatario("");setEmailCc("");setSearchContatti("");setEmailContatti([]);
+    setEmailOggetto("");setEmailMessaggio("");setEmailBozzaErrore("");
+    setEmailDataManuale("");setEmailDataMancante(false);setF24File(null);
   };
 
   const inviaComunicazioneScadenza = async () => {
@@ -574,48 +608,15 @@ const [emailCc, setEmailCc] = useState("");
         return;
       }
 
+      if(emailBozzaLoading||emailBozzaErrore||!emailOggetto.trim()||!emailMessaggio.trim()){
+        toast({title:"Bozza non pronta",description:emailBozzaErrore||"Verifica oggetto e messaggio prima di inviare.",variant:"destructive"});return;
+      }
       setSendingEmail(true);
 
-      const templateCode =
-        invioEmailModal.tipo === "acconto" ? "IMU_ACCONTO" : "IMU_SALDO";
-
-      const { data: template, error: templateError } = await (supabase as any)
-        .from("tbemail_template")
-        .select("oggetto, corpo")
-        .eq("codice", templateCode)
-        .eq("attivo", true)
-        .maybeSingle();
-
-      if (templateError) throw templateError;
-      if (!template) throw new Error(`Template ${templateCode} non trovato`);
-
-      const scadenza = invioEmailModal.scadenza;
-
-      const studioId = await studioService.getStudioId();
-      const dates = resolveEmailScadenza(await tipoScadenzaService.getAttivi(studioId), invioEmailModal.tipo === "acconto" ? "imu_acconto" : "imu_saldo", Number(scadenza.anno_riferimento || new Date().getFullYear()));
-      const firmaUtente = `${utenteLoggato?.nome || ""} ${
-        utenteLoggato?.cognome || ""
-      }`.trim();
-
-      const vars: Record<string, string> = {
-        CLIENTE: scadenza.nominativo || "Cliente",
-        ANNO: String(scadenza.anno_riferimento || new Date().getFullYear()),
-        DATA_SCADENZA: dates.dataScadenza,
-        TIPO_IMU: invioEmailModal.tipo === "acconto" ? "Acconto" : "Saldo",
-        FIRMA_UTENTE: firmaUtente,
-      };
-
-      const replaceVars = (text: string) => {
-        let output = text || "";
-        Object.entries(vars).forEach(([key, value]) => {
-          output = output.replaceAll(`[${key}]`, value || "");
-        });
-        return output;
-      };
-
-      const oggetto = replaceVars(template.oggetto);
-      const messaggio = replaceVars(template.corpo);
-
+      const scadenza=invioEmailModal.scadenza;
+      const oggetto=emailOggetto.trim();
+      const messaggio=emailMessaggio.trim();
+      if(!oggetto||!messaggio)throw Error("Oggetto e testo email obbligatori.");
       const safeName = f24File.name.replace(/[^\w.\-]+/g, "_");
       const fileName = `${Date.now()}_${safeName}`;
       const filePath = `comunicazioni/${fileName}`;
@@ -1093,9 +1094,18 @@ const [emailCc, setEmailCc] = useState("");
         </Card>
       </div>
 
+      <style jsx global>{`
+        .imu-email-form input,.imu-email-form textarea{
+          border:2px solid #94a3b8!important;background:#fff!important;border-radius:7px!important;
+        }
+        .imu-email-form input:focus,.imu-email-form textarea:focus{
+          border-color:#0284c7!important;box-shadow:0 0 0 2px rgba(2,132,199,.16)!important;
+        }
+        .imu-email-form input:disabled,.imu-email-form textarea:disabled{background:#f1f5f9!important;}
+      `}</style>
       {invioEmailModal.open && invioEmailModal.scadenza && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 no-print">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 no-print">
+          <div className="w-full max-w-3xl max-h-[94vh] overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
             <h2 className="text-xl font-bold mb-2">
               Invia F24 IMU {invioEmailModal.tipo === "acconto" ? "Acconto" : "Saldo"}
             </h2>
@@ -1104,7 +1114,7 @@ const [emailCc, setEmailCc] = useState("");
               {invioEmailModal.scadenza.nominativo}
             </p>
 
-            <div className="space-y-4">
+            <div className="imu-email-form space-y-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">Contatto Email</label>
 
@@ -1143,6 +1153,32 @@ const [emailCc, setEmailCc] = useState("");
 
               <div className="mb-3"><label className="text-sm font-medium mb-2 block">CC · indirizzi in copia (facoltativo)</label><Input type="text" value={emailCc} onChange={e=>setEmailCc(e.target.value)} placeholder="email1@esempio.it; email2@esempio.it"/><p className="mt-1 text-xs text-gray-500">Separa più indirizzi con virgola o punto e virgola.</p></div>
               <div>
+                <label className="text-sm font-medium mb-2 block">Oggetto dell'email *</label>
+                <Input value={emailOggetto} onChange={e=>setEmailOggetto(e.target.value)}
+                  disabled={sendingEmail||emailBozzaLoading}/>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Messaggio modificabile prima dell'invio *</label>
+                <Textarea value={emailMessaggio} onChange={e=>setEmailMessaggio(e.target.value)}
+                  rows={9} className="min-h-[190px] resize-y" disabled={sendingEmail||emailBozzaLoading}/>
+                <p className="mt-1 text-xs text-gray-500">Le modifiche valgono soltanto per questa email. Il modello IMU non viene modificato.</p>
+              </div>
+              {emailBozzaLoading&&<p className="text-sm text-blue-700">Preparazione del messaggio...</p>}
+              {emailBozzaErrore&&<div role="alert" className="rounded-lg border-2 border-amber-400 bg-amber-50 p-3 text-sm text-amber-900">{emailBozzaErrore}</div>}
+              {emailDataMancante&&(
+                <div className="rounded-lg border-2 border-sky-400 bg-sky-50 p-4 space-y-3">
+                  <p className="font-semibold text-sky-900">Verifica data scadenza IMU</p>
+                  <p className="text-xs text-sky-800">La scadenza dell'anno selezionato non è disponibile nel calendario. Inserisci la data verificata: non verrà modificato il calendario generale.</p>
+                  <label className="block text-sm font-medium">Data scadenza *
+                    <Input type="date" className="mt-1" value={emailDataManuale} onChange={e=>setEmailDataManuale(e.target.value)} />
+                  </label>
+                  <Button type="button" variant="outline" disabled={emailBozzaLoading||!emailDataManuale}
+                    onClick={()=>invioEmailModal.scadenza&&invioEmailModal.tipo&&void preparaBozzaImu(invioEmailModal.scadenza,invioEmailModal.tipo,emailDataManuale)}>
+                    Applica data e prepara messaggio
+                  </Button>
+                </div>
+              )}
+              <div>
                 <label className="text-sm font-medium mb-2 block">Allegato F24 *</label>
                 <Input type="file" accept=".pdf" onChange={(e) => setF24File(e.target.files?.[0] || null)} />
                 {f24File && (
@@ -1156,7 +1192,7 @@ const [emailCc, setEmailCc] = useState("");
 
               <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="outline" onClick={chiudiInvioEmail} disabled={sendingEmail}>Annulla</Button>
-                <Button type="button" onClick={inviaComunicazioneScadenza} disabled={sendingEmail || !emailDestinatario} className="bg-blue-600 hover:bg-blue-700">
+                <Button type="button" onClick={inviaComunicazioneScadenza} disabled={sendingEmail||emailBozzaLoading||!!emailBozzaErrore||!emailDestinatario||!f24File||!emailOggetto.trim()||!emailMessaggio.trim()} className="bg-blue-600 hover:bg-blue-700">
                   {sendingEmail ? "Invio..." : "Invia email"}
                 </Button>
               </div>
