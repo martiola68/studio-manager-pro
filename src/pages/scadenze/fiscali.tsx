@@ -97,6 +97,9 @@ const [emailOggetto,setEmailOggetto]=useState("");
 const [emailMessaggio,setEmailMessaggio]=useState("");
 const [emailBozzaLoading,setEmailBozzaLoading]=useState(false);
 const [emailBozzaErrore,setEmailBozzaErrore]=useState("");
+const [emailDataMancante,setEmailDataMancante]=useState(false);
+const [emailDataManuale,setEmailDataManuale]=useState("");
+const [emailMaggiorataManuale,setEmailMaggiorataManuale]=useState("");
 const [searchContatti, setSearchContatti] = useState("");
 const [emailContatti, setEmailContatti] = useState<
   {
@@ -481,24 +484,42 @@ return rows.map((r) => {
   }
 };
 
- const preparaBozzaFiscali=async(scadenza:ScadenzaFiscali,tipo:TipoEmailFiscali)=>{
-   setEmailBozzaLoading(true);setEmailBozzaErrore("");
+ const preparaBozzaFiscali=async(scadenza:ScadenzaFiscali,tipo:TipoEmailFiscali,dateManuali?:{ordinaria:string;maggiorata:string})=>{
+   setEmailBozzaLoading(true);setEmailBozzaErrore("");setEmailDataMancante(false);
    try{
      const codice=tipo==="saldo_primo_acconto_cciaa"?"FISCALI_SALDO_PRIMO_ACCONTO_CCIAA":"FISCALI_SECONDO_ACCONTO";
      const {data,error}=await (supabase as any).from("tbemail_template").select("oggetto,corpo").eq("codice",codice).eq("attivo",true).maybeSingle();
      if(error)throw error;if(!data)throw Error("Template "+codice+" non trovato");
      const studioId=await studioService.getStudioId();
-     const dates=resolveEmailScadenza(await tipoScadenzaService.getAttivi(studioId),tipo==="saldo_primo_acconto_cciaa"?"fiscali_saldo_primo_acconto_cciaa":"fiscali_secondo_acconto",Number(scadenza.anno_riferimento||annoConsultazione),!!scadenza.soggetto_isa,tipo==="saldo_primo_acconto_cciaa");
+     const toIt=(iso:string)=>iso ? iso.slice(8,10)+"/"+iso.slice(5,7)+"/"+iso.slice(0,4) : "";
+     const validIso=(iso:string)=>/^\d{4}-\d{2}-\d{2}$/.test(iso)&&!Number.isNaN(Date.parse(iso))&&new Date(iso+"T00:00:00Z").toISOString().slice(0,10)===iso;
+     let dates:{dataScadenza:string;dataScadenzaMaggiorata:string};
+     if(dateManuali){
+       if(!validIso(dateManuali.ordinaria)||(tipo==="saldo_primo_acconto_cciaa"&&!validIso(dateManuali.maggiorata)))
+         throw Error("Inserisci le date corrette prima di generare la bozza (ordinaria e maggiorata per il 1° acconto).");
+       dates={dataScadenza:toIt(dateManuali.ordinaria),dataScadenzaMaggiorata:toIt(dateManuali.maggiorata)};
+     }else{
+       try{
+         dates=resolveEmailScadenza(await tipoScadenzaService.getAttivi(studioId),
+           tipo==="saldo_primo_acconto_cciaa"?"fiscali_saldo_primo_acconto_cciaa":"fiscali_secondo_acconto",
+           Number(scadenza.anno_riferimento||annoConsultazione),!!scadenza.soggetto_isa,
+           tipo==="saldo_primo_acconto_cciaa");
+       }catch(e:any){
+         setEmailDataMancante(true);
+         throw Error((e?.message||"Data fiscale non trovata")+
+           " Inserisci le date verificate qui sotto per questa sola comunicazione.");
+       }
+     }
      const vars:Record<string,string>={CLIENTE:scadenza.nominativo||"Cliente",ANNO:String(scadenza.anno_riferimento||new Date().getFullYear()),DATA_SCADENZA:dates.dataScadenza,DATA_SCADENZA_MAGGIORATA:dates.dataScadenzaMaggiorata,TIPO_FISCALE:tipo==="saldo_primo_acconto_cciaa"?"Saldo / 1° acconto / CCIAA":"2° acconto",FIRMA_UTENTE:`${utenteLoggato?.nome||""} ${utenteLoggato?.cognome||""}`.trim()};
      const fill=(str:string)=>Object.entries(vars).reduce((s,[k,v])=>s.replaceAll(`[${k}]`,v||""),str||"");
-     setEmailOggetto(fill(data.oggetto));setEmailMessaggio(fill(data.corpo));
+     setEmailOggetto(fill(data.oggetto));setEmailMessaggio(fill(data.corpo));setEmailDataMancante(false);
    }catch(e:any){setEmailBozzaErrore(e?.message||"Impossibile caricare la bozza");}
    finally{setEmailBozzaLoading(false);}
  };
  const apriInvioEmail=(scadenza:ScadenzaFiscali,tipo:TipoEmailFiscali)=>{
    setEmailModal({open:true,sending:false,scadenza,tipo});
    setEmailDestinatario("");setEmailCc("");setEmailOggetto("");setEmailMessaggio("");
-   setEmailBozzaErrore("");setSearchContatti("");setEmailContatti([]);setF24File(null);
+   setEmailBozzaErrore("");setEmailDataMancante(false);setEmailDataManuale("");setEmailMaggiorataManuale("");setSearchContatti("");setEmailContatti([]);setF24File(null);
    void preparaBozzaFiscali(scadenza,tipo);
  };
 
@@ -545,6 +566,8 @@ const chiudiInvioEmail = () => {
 
   setEmailDestinatario("");
   setEmailCc("");
+  setEmailOggetto("");setEmailMessaggio("");setEmailBozzaErrore("");setEmailDataMancante(false);
+  setEmailDataManuale("");setEmailMaggiorataManuale("");
   setSearchContatti("");
   setEmailContatti([]);
   setF24File(null);
@@ -1402,6 +1425,21 @@ const inviaEmailFiscali = async () => {
         </CardContent>
       </Card>
 
+      <style jsx global>{`
+        .fiscali-email-form input,
+        .fiscali-email-form textarea {
+          border: 2px solid #94a3b8 !important;
+          background: white !important;
+          border-radius: 7px !important;
+        }
+        .fiscali-email-form input:focus,
+        .fiscali-email-form textarea:focus {
+          border-color: #0284c7 !important;
+          box-shadow: 0 0 0 2px rgba(2,132,199,.16) !important;
+        }
+        .fiscali-email-form input:disabled,
+        .fiscali-email-form textarea:disabled {background:#f1f5f9!important;}
+      `}</style>
       {emailModal.open && emailModal.scadenza && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3">
           <div className="w-full max-w-3xl max-h-[94vh] overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
@@ -1416,7 +1454,7 @@ const inviaEmailFiscali = async () => {
               {emailModal.scadenza.nominativo}
             </p>
 
-            <div className="space-y-4">
+            <div className="fiscali-email-form space-y-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">
                   Contatto Email
@@ -1487,7 +1525,25 @@ const inviaEmailFiscali = async () => {
                 <p className="mt-1 text-xs text-gray-500">Puoi integrare il testo senza cambiare il modello originale.</p>
               </div>
               {emailBozzaLoading&&<p className="text-sm text-blue-700">Preparazione messaggio...</p>}
-              {emailBozzaErrore&&<p role="alert" className="text-sm text-red-700">{emailBozzaErrore}</p>}
+              {emailBozzaErrore&&<div role="alert" className="rounded-lg border-2 border-amber-400 bg-amber-50 p-3 text-sm text-amber-900">{emailBozzaErrore}</div>}
+              {emailDataMancante&&(
+                <div className="space-y-3 rounded-lg border-2 border-sky-400 bg-sky-50 p-4">
+                  <p className="font-semibold text-sky-900">Date da verificare per questa comunicazione</p>
+                  <p className="text-xs text-sky-800">La scadenza non risulta riconosciuta nel Calendario Scadenze. Inserisci le date corrette da una fonte verificata: non saranno registrate nel calendario generale.</p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <label className="text-sm font-medium">Scadenza ordinaria *
+                      <Input type="date" value={emailDataManuale} onChange={e=>setEmailDataManuale(e.target.value)} className="mt-1 border-2 border-slate-400" />
+                    </label>
+                    {emailModal.tipo==="saldo_primo_acconto_cciaa"&&<label className="text-sm font-medium">Scadenza maggiorata *
+                      <Input type="date" value={emailMaggiorataManuale} onChange={e=>setEmailMaggiorataManuale(e.target.value)} className="mt-1 border-2 border-slate-400" />
+                    </label>}
+                  </div>
+                  <Button type="button" variant="outline" disabled={emailBozzaLoading||!emailDataManuale||(emailModal.tipo==="saldo_primo_acconto_cciaa"&&!emailMaggiorataManuale)}
+                    onClick={()=>emailModal.scadenza&&emailModal.tipo&&void preparaBozzaFiscali(emailModal.scadenza,emailModal.tipo,{ordinaria:emailDataManuale,maggiorata:emailMaggiorataManuale})}>
+                    Applica date e prepara messaggio
+                  </Button>
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium mb-2 block">
                   Allegato F24 *
