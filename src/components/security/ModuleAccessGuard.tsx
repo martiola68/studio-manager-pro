@@ -57,7 +57,7 @@ export function ModuleAccessGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  const allowed = Boolean(studioId && piano && hasModule(protectedModule.modulo));
+  const allowed = Boolean(studioId && (protectedModule.modulo === "aml" ? hasModule("aml") : (piano && hasModule(protectedModule.modulo))));
   if (allowed) return <>{children}</>;
 
   return (
