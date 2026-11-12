@@ -47,6 +47,13 @@ export function ModuleAccessGuard({ children }: { children: ReactNode }) {
     Funzione non disponibile nell'interfaccia AML.
   </div>;
 
+  if (isAmlHost && !isLoading && !hasModule("aml")) {
+    return <div className="mx-auto mt-8 max-w-xl rounded-lg border border-amber-300 bg-white p-6 text-center">
+      <h2 className="text-lg font-bold">Accesso AML non autorizzato</h2>
+      <p className="mt-2">Per utilizzare AML è richiesta una licenza annuale AML attiva.</p>
+      <a className="mt-3 inline-block text-blue-700 underline" href="https://studiomanagerpro.it/aml#prezzi">Scopri i piani AML</a>
+    </div>;
+  }
   if (!protectedModule) return <>{children}</>;
 
   if (isLoading) {
@@ -57,7 +64,7 @@ export function ModuleAccessGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  const allowed = Boolean(studioId && piano && hasModule(protectedModule.modulo));
+  const allowed = Boolean(studioId && (protectedModule.modulo === "aml" ? hasModule("aml") : (piano && hasModule(protectedModule.modulo))));
   if (allowed) return <>{children}</>;
 
   return (
@@ -68,6 +75,7 @@ export function ModuleAccessGuard({ children }: { children: ReactNode }) {
         <p className="mt-3 text-slate-600">
           Il modulo <strong>{protectedModule.label}</strong> non è incluso nella licenza attiva di questo studio.
         </p>
+        {protectedModule.modulo === "aml" && <a href="https://studiomanagerpro.it/aml#prezzi" target="_blank" rel="noopener noreferrer" className="mt-5 inline-block rounded-lg border border-blue-200 bg-blue-50 px-5 py-2.5 font-semibold text-blue-700">Scopri e acquista AML PRO separatamente</a>}
         <button
           type="button"
           className="mt-6 rounded-lg bg-slate-900 px-5 py-2.5 font-medium text-white"

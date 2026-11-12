@@ -1,3 +1,4 @@
+import { checkAmlLicense } from "@/lib/aml/checkLicense";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -32,6 +33,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (utenteError || !utente?.studio_id) {
       return res.status(403).json({ ok: false, error: "Studio utente non disponibile" });
     }
+
+    const entitlement = await checkAmlLicense(String(utente.studio_id));
+    if (!entitlement.allowed) return res.status(403).json({ok:false,error:entitlement.reason});
 
     const praticaId = String(req.body?.pratica_id || req.query.pratica_id || "").trim();
     if (!praticaId) {

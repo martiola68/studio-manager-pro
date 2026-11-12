@@ -1,3 +1,4 @@
+import { getAuthorizedAmlStudio } from "@/lib/aml/checkLicense";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
@@ -28,6 +29,8 @@ export default async function handler(
       });
     }
 
+    const allowedStudio=await getAuthorizedAmlStudio(req);
+    if(!allowedStudio)return res.status(403).json({ok:false,error:"Licenza AML o autenticazione mancante"});
     const { societaId, password, enabled } = req.body || {};
 
     if (!societaId) {
@@ -54,7 +57,8 @@ export default async function handler(
     const { error } = await supabaseAdmin
       .from("tbRespAVSocieta")
       .update(payload)
-      .eq("id", societaId);
+      .eq("id", societaId)
+      .eq("studio_id",allowedStudio.studioId);
 
     if (error) {
       return res.status(500).json({ ok: false, error: error.message });

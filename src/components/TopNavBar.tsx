@@ -37,6 +37,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useStudio } from "@/contexts/StudioContext";
 
 type UtenteRow = Database["public"]["Tables"]["tbutenti"]["Row"];
 
@@ -64,6 +65,7 @@ interface MenuItem {
 }
 
 export function TopNavBar() {
+  const { hasModule, isLoading: licenseLoading } = useStudio();
   const [currentUser, setCurrentUser] = useState<TopNavUser | null>(null);
   const [loading, setLoading] = useState(true);
   const versioneCorrenteRef = useRef<string>(
@@ -488,6 +490,7 @@ export function TopNavBar() {
     const hasChildren = Boolean(item.children && item.children.length > 0);
     const itemActive = isActive(item);
     const menuOpen = desktopMenuOpen === item.label;
+    const amlLocked = item.label === "AML" && (licenseLoading || !hasModule("aml"));
     const showPromemoriaRicevutiBadge = item.label === "Promemoria" && promemoriaRicevuti > 0;
     const showPromemoriaAlert = item.label === "Promemoria" && promemoriaAttivi > 0;
     const showAgendaBadge = item.label === "Agenda" && eventiImminenti > 0;
@@ -506,7 +509,7 @@ export function TopNavBar() {
               : "text-white hover:bg-white/15 hover:text-white"
           )}
         >
-          {item.icon}<span>{item.label}</span><ChevronDown className="ml-0.5 h-3.5 w-3.5" />
+          {item.icon}<span>{item.label}</span>{amlLocked && <span title="Licenza AML non attiva" aria-label="Licenza AML richiesta">🔒</span>}<ChevronDown className="ml-0.5 h-3.5 w-3.5" />
         </Button>
       );
     }
@@ -571,11 +574,12 @@ export function TopNavBar() {
                 const voceActive = isActive(voce);
                 const voceRiservata =
                   (voce.adminOnly && currentUser?.tipo_utente !== "Admin") ||
-                  (voce.systemAdminOnly && !currentUser?.amministratore_sistema_generale);
+                  (voce.systemAdminOnly && !currentUser?.amministratore_sistema_generale) ||
+                  (desktopMenuAttivo.label === "AML" && (licenseLoading || !hasModule("aml")));
                 const vocePdf = !!voce.href?.toLowerCase().endsWith(".pdf");
-                const motivoRiserva = voce.systemAdminOnly
-                  ? "Solo amministratore generale"
-                  : "Solo amministratore";
+                const motivoRiserva = desktopMenuAttivo.label === "AML" && (licenseLoading || !hasModule("aml"))
+                  ? "Licenza AML non attiva"
+                  : voce.systemAdminOnly ? "Solo amministratore generale" : "Solo amministratore";
                 return (
                   <Link
                     key={voce.label}

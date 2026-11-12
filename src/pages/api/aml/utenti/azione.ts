@@ -1,3 +1,4 @@
+import { checkAmlLicense } from "@/lib/aml/checkLicense";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
@@ -28,6 +29,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (managerError || !manager || manager.attivo === false || manager.tipo_utente !== "Admin" || !manager.studio_id) {
       return res.status(403).json({ error: "Operazione riservata all'amministratore attivo dello studio" });
     }
+    const entitlement=await checkAmlLicense(String(manager.studio_id));
+    if(!entitlement.allowed)return res.status(403).json({error:entitlement.reason});
     const { azione, userId } = req.body || {};
     if (!["reset", "toggle", "delete"].includes(String(azione)) || typeof userId !== "string") {
       return res.status(400).json({ error: "Azione o utente non valido" });
