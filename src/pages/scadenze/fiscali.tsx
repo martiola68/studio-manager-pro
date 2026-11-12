@@ -93,6 +93,9 @@ export default function ScadenzeFiscaliPage() {
 
 const [emailDestinatario, setEmailDestinatario] = useState("");
 const [emailCc, setEmailCc] = useState("");
+const [searchContattiCc, setSearchContattiCc] = useState("");
+const [emailContattiCc, setEmailContattiCc] = useState<Array<{id:string;nome:string|null;cognome:string|null;email:string|null}>>([]);
+const [ricercaCcLoading, setRicercaCcLoading] = useState(false);
 const [emailOggetto,setEmailOggetto]=useState("");
 const [emailMessaggio,setEmailMessaggio]=useState("");
 const [emailBozzaLoading,setEmailBozzaLoading]=useState(false);
@@ -535,7 +538,7 @@ return rows.map((r) => {
  };
  const apriInvioEmail=(scadenza:ScadenzaFiscali,tipo:TipoEmailFiscali)=>{
    setEmailModal({open:true,sending:false,scadenza,tipo});
-   setEmailDestinatario("");setEmailCc("");setEmailOggetto("");setEmailMessaggio("");
+   setEmailDestinatario("");setEmailCc("");setSearchContattiCc("");setEmailContattiCc([]);setEmailOggetto("");setEmailMessaggio("");
    setEmailBozzaErrore("");setEmailDataMancante(false);setEmailDataManuale("");setEmailMaggiorataManuale("");setSearchContatti("");setEmailContatti([]);setF24File(null);
    void preparaBozzaFiscali(scadenza,tipo);
  };
@@ -564,6 +567,39 @@ return rows.map((r) => {
   setEmailContatti((data || []) as any[]);
 };
 
+const cercaContattiCc = async (term: string) => {
+  const ricerca = term.trim().replace(/[,()%*]/g, " ");
+  if (!ricerca) { setEmailContattiCc([]); return; }
+  setRicercaCcLoading(true);
+  try {
+    const { data, error } = await supabase.from("tbcontatti" as any)
+      .select("id,nome,cognome,email")
+      .not("email","is",null)
+      .or(["nome","cognome","email"].map(col => `${col}.ilike.%${ricerca}%`).join(","))
+      .order("cognome")
+      .limit(30);
+    if (error) throw error;
+    setEmailContattiCc((data || []).filter((row:any) => String(row.email || "").trim()) as any[]);
+  } catch (error) {
+    console.error("Errore ricerca CC",error);
+    setEmailContattiCc([]);
+    toast({title:"Ricerca CC non disponibile",description:"Non è stato possibile recuperare i contatti dalla rubrica.",variant:"destructive"});
+  } finally {
+    setRicercaCcLoading(false);
+  }
+};
+const aggiungiContattoCc = (email: string) => {
+  const indirizzo = email.trim();
+  if (!indirizzo) return;
+  setEmailCc(prev => {
+    const presenti = prev.split(/[;,]/).map(x => x.trim()).filter(Boolean);
+    if (presenti.some(x => x.toLowerCase() === indirizzo.toLowerCase())) return prev;
+    return [...presenti,indirizzo].join("; ");
+  });
+  setSearchContattiCc("");
+  setEmailContattiCc([]);
+};
+
 const getContattoLabel = (contatto: {
   nome: string | null;
   cognome: string | null;
@@ -583,6 +619,7 @@ const chiudiInvioEmail = () => {
 
   setEmailDestinatario("");
   setEmailCc("");
+  setSearchContattiCc("");setEmailContattiCc([]);
   setEmailOggetto("");setEmailMessaggio("");setEmailBozzaErrore("");setEmailDataMancante(false);
   setEmailDataManuale("");setEmailMaggiorataManuale("");
   setSearchContatti("");
@@ -1531,7 +1568,33 @@ const inviaEmailFiscali = async () => {
                 />
               </div>
 
-              <div className="mb-3"><label className="text-sm font-medium mb-2 block">CC · indirizzi in copia (facoltativo)</label><Input type="text" value={emailCc} onChange={e=>setEmailCc(e.target.value)} placeholder="email1@esempio.it; email2@esempio.it"/><p className="mt-1 text-xs text-gray-500">Separa più indirizzi con virgola o punto e virgola.</p></div>
+              <div className="mb-3">
+  <label className="text-sm font-medium mb-2 block">CC · indirizzi in copia (facoltativo)</label>
+  <div className="flex gap-2">
+    <Input value={searchContattiCc} onChange={e=>{setSearchContattiCc(e.target.value);setEmailContattiCc([]);}}
+      onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();void cercaContattiCc(searchContattiCc);}}}
+      placeholder="Cerca un contatto da aggiungere in CC..." />
+    <Button type="button" variant="outline" onClick={()=>void cercaContattiCc(searchContattiCc)}
+      disabled={ricercaCcLoading||!searchContattiCc.trim()}>
+      {ricercaCcLoading?"Cerco...":"Cerca"}
+    </Button>
+  </div>
+  {emailContattiCc.length>0&&(
+    <div className="mt-2 max-h-[150px] overflow-y-auto rounded-md border-2 border-slate-300 bg-white">
+      {emailContattiCc.map(contatto=>(
+        <button key={contatto.id} type="button" className="flex w-full items-center gap-2 border-b px-3 py-2 text-left text-sm hover:bg-sky-50"
+          onClick={()=>aggiungiContattoCc(contatto.email||"")}>
+          <span className="font-medium">{getContattoLabel(contatto)}</span>
+          <span className="text-gray-500">{contatto.email}</span>
+          <span className="ml-auto text-sky-700">+ CC</span>
+        </button>
+      ))}
+    </div>
+  )}
+  <Input className="mt-2" type="text" value={emailCc} onChange={e=>setEmailCc(e.target.value)}
+    placeholder="email1@esempio.it; email2@esempio.it" />
+  <p className="mt-1 text-xs text-gray-500">Puoi scegliere più contatti oppure inserire manualmente gli indirizzi, separati da virgola o punto e virgola. I contatti già aggiunti rimangono.</p>
+</div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Oggetto dell'email *</label>
                 <Input value={emailOggetto} onChange={e=>setEmailOggetto(e.target.value)} disabled={emailModal.sending||emailBozzaLoading}/>
