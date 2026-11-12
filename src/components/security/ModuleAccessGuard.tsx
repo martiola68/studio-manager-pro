@@ -47,6 +47,13 @@ export function ModuleAccessGuard({ children }: { children: ReactNode }) {
     Funzione non disponibile nell'interfaccia AML.
   </div>;
 
+  if (isAmlHost && !isLoading && !hasModule("aml")) {
+    return <div className="mx-auto mt-8 max-w-xl rounded-lg border border-amber-300 bg-white p-6 text-center">
+      <h2 className="text-lg font-bold">Accesso AML non autorizzato</h2>
+      <p className="mt-2">Per utilizzare AML è richiesta una licenza annuale AML attiva.</p>
+      <a className="mt-3 inline-block text-blue-700 underline" href="https://studiomanagerpro.it/aml#prezzi">Scopri i piani AML</a>
+    </div>;
+  }
   if (!protectedModule) return <>{children}</>;
 
   if (isLoading) {
