@@ -9,8 +9,15 @@ export default async function handler(req:NextApiRequest,res:NextApiResponse){
    const auth=await getAuthorizedAmlStudio(req);
    if(!auth)return res.status(403).json({error:"Licenza AML o sessione non valida"});
    const db=supabaseAdmin as any;
-   const {data:user,error:userError}=await db.from("tbutenti").select("tipo_utente,attivo")
+   let {data:user,error:userError}=await db.from("tbutenti").select("tipo_utente,attivo")
      .eq("user_id",auth.userId).eq("studio_id",auth.studioId).maybeSingle();
+   if(!user&&!userError){
+     const {data:authUser}=await supabaseAdmin.auth.admin.getUserById(auth.userId);
+     if(authUser?.user?.email){
+       const alt=await db.from("tbutenti").select("tipo_utente,attivo").ilike("email",authUser.user.email).eq("studio_id",auth.studioId).maybeSingle();
+       user=alt.data;userError=alt.error;
+     }
+   }
    if(userError||user?.tipo_utente!=="Admin"||user.attivo!==true)
      return res.status(403).json({error:"Solo l'amministratore può consultare le licenze"});
    const [aml,smp,usage]=await Promise.all([
