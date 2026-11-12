@@ -1915,8 +1915,21 @@ const mostraVistaSocieta =
         <CardHeader className="bg-blue-600 py-3 text-white">
           <CardTitle className="flex items-center justify-between text-xl">
             <span>{societa.ragione_sociale || "Società collegata"}</span>
-            <span className="rounded-full bg-blue-700 px-3 py-1 text-sm font-semibold text-white">
-              {societa.referenti.length} referenti
+            <span className="flex items-center gap-3">
+              <span className="rounded-full bg-blue-700 px-3 py-1 text-sm font-semibold text-white">
+                {societa.referenti.length} referenti
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="border-white bg-white text-blue-800 hover:bg-blue-50"
+                title="Apri la scheda anagrafica della società per modificarla"
+                onClick={() => void router.push(`/clienti?modifica=${encodeURIComponent(String(societa.cliente_id))}`)}
+              >
+                <Edit className="mr-1 h-4 w-4" />
+                Modifica anagrafica
+              </Button>
             </span>
           </CardTitle>
         </CardHeader>
@@ -1933,8 +1946,20 @@ const mostraVistaSocieta =
               key={`${societa.cliente_id}-${contatto.id}`}
               className="rounded-md border bg-white p-4 shadow-sm"
             >
-              <div className="text-[21px] font-bold text-gray-900">
-                {contatto.cognome} {contatto.nome}
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-[21px] font-bold text-gray-900">
+                  {contatto.cognome} {contatto.nome}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void handleEdit(contatto)}
+                  title="Modifica questo contatto"
+                >
+                  <Edit className="mr-1 h-4 w-4" />
+                  Modifica contatto
+                </Button>
               </div>
 
               <div className="mt-2 grid grid-cols-1 gap-3 text-base text-gray-700 md:grid-cols-3">
