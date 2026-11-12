@@ -175,11 +175,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .lte("data_inizio", date)
         .gte("data_fine", date);
       if (richiestePermessoError) console.error("Report presenze: orari permessi non disponibili", richiestePermessoError);
-      const permessiApprovati = new Map<string, { ora: string; ore: number }>();
+      type FasciaPermesso = { inizio: string; fine: string; ore: number };
+      const permessiApprovati = new Map<string, FasciaPermesso[]>();
+      const formatOrePermesso = (ore: number) =>
+        Number.isInteger(ore) ? String(ore) : String(ore).replace(".", ",");
+      const normalizzaOra = (value: unknown): string | undefined => {
+        const ora = String(value || "").trim().slice(0, 5);
+        if (!/^\d{2}:\d{2}$/.test(ora)) return undefined;
+        const [h, m] = ora.split(":").map(Number);
+        return h >= 0 && h < 24 && m >= 0 && m < 60 ? ora : undefined;
+      };
+      const fasciaPermesso = (oraInizio: unknown, ore: unknown): FasciaPermesso | undefined => {
+        const inizio = normalizzaOra(oraInizio);
+        const durata = Number(ore);
+        if (!inizio || !Number.isFinite(durata) || durata <= 0) return undefined;
+        const [h, m] = inizio.split(":").map(Number);
+        const totale = h * 60 + m + Math.round(durata * 60);
+        if (totale > 24 * 60) return undefined;
+        const fine = `${String(Math.floor(totale / 60)).padStart(2, "0")}:${String(totale % 60).padStart(2, "0")}`;
+        return { inizio, fine, ore: durata };
+      };
       for (const richiesta of richiestePermesso || []) {
-        const ora = String(richiesta.ora_richiesta || "").slice(0, 5);
-        if (!/^\\d{2}:\\d{2}$/.test(ora)) continue;
-        permessiApprovati.set(String(richiesta.utente_id), { ora, ore: Number(richiesta.ore || 0) });
+        const fascia = fasciaPermesso(richiesta.ora_richiesta, richiesta.ore);
+        if (!fascia) continue;
+        const key = String(richiesta.utente_id);
+        const lista = permessiApprovati.get(key) || [];
+        if (!lista.some(x => x.inizio === fascia.inizio && x.fine === fascia.fine)) {
+          lista.push(fascia);
+          lista.sort((a, b) => a.inizio.localeCompare(b.inizio));
+          permessiApprovati.set(key, lista);
+        }
       }
 
       const smartMemberIds = new Set<string>();
@@ -195,7 +220,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const stato = new Map<
         string,
-        { codice: string; descrizione: string; oraPermesso?: string; orePermesso?: number }
+        { codice: string; descrizione: string; oraPermesso?: string; orePermesso?: number; fascePermesso?: FasciaPermesso[] }
       >();
 
       for (const r of smart || []) {
@@ -294,8 +319,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               : codice === "Ps"
                 ? "Smart working"
                 : codice),
-          oraPermesso: permessiApprovati.get(userId)?.ora || oraDaNotePermesso(r.note),
-          orePermesso: permessiApprovati.get(userId)?.ore || oreDaCodicePermesso(codice),
+          oraPermesso: permessiApprovati.get(userId)?.[0]?.inizio || oraDaNotePermesso(r.note),
+          orePermesso: permessiApprovati.get(userId)?.[0]?.ore || oreDaCodicePermesso(codice),
+          fascePermesso: permessiApprovati.get(userId),
         });
       }
 
@@ -306,11 +332,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           smart: any[];
           assenze: Array<{
             utente: any;
-            stato: { codice: string; descrizione: string; oraPermesso?: string; orePermesso?: number };
+            stato: { codice: string; descrizione: string; oraPermesso?: string; orePermesso?: number; fascePermesso?: FasciaPermesso[] };
           }>;
           permessi: Array<{
             utente: any;
-            stato: { codice: string; descrizione: string; oraPermesso?: string; orePermesso?: number };
+            stato: { codice: string; descrizione: string; oraPermesso?: string; orePermesso?: number; fascePermesso?: FasciaPermesso[] };
           }>;
         }
       >();
@@ -339,6 +365,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         else if (isPermesso) gruppo.permessi.push({ utente: u, stato: s });
         else if (isAssenza) gruppo.assenze.push({ utente: u, stato: s });
 
+        // Permesso approvato visibile anche con presenza parziale Pp/Ps.
+        if (!isPermesso) {
+          const fasce = permessiApprovati.get(String(u.id));
+          if (fasce?.length) gruppo.permessi.push({
+            utente: u,
+            stato: { codice: "Permesso", descrizione: "Permesso approvato", fascePermesso: fasce },
+          });
+        }
         perSettore.set(settore, gruppo);
       }
 
@@ -461,14 +495,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               x.stato.descrizione || x.stato.codice || "Permesso";
             const dettagli: string[] = [];
 
-            if (x.stato.oraPermesso) {
-              dettagli.push(`dalle ${x.stato.oraPermesso}`);
-            }
-
-            if (x.stato.orePermesso) {
-              dettagli.push(
-                `${x.stato.orePermesso} ${x.stato.orePermesso === 1 ? "ora" : "ore"}`
-              );
+            if (x.stato.fascePermesso?.length) {
+              for (const fascia of x.stato.fascePermesso) {
+                dettagli.push(`${formatOrePermesso(fascia.ore)} ${fascia.ore === 1 ? "ora" : "ore"} · dalle ${fascia.inizio} alle ${fascia.fine}`);
+              }
+            } else {
+              const fascia = fasciaPermesso(x.stato.oraPermesso, x.stato.orePermesso);
+              if (fascia) {
+                dettagli.push(`${formatOrePermesso(fascia.ore)} ${fascia.ore === 1 ? "ora" : "ore"} · dalle ${fascia.inizio} alle ${fascia.fine}`);
+              } else {
+                if (x.stato.oraPermesso) dettagli.push(`dalle ${x.stato.oraPermesso}`);
+                if (x.stato.orePermesso) dettagli.push(
+                  `${formatOrePermesso(x.stato.orePermesso)} ${x.stato.orePermesso === 1 ? "ora" : "ore"}`
+                );
+              }
             }
 
             return {
