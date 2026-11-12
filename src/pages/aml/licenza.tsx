@@ -42,7 +42,7 @@ export default function AmlLicenza() {
         <div><dt className="text-slate-500">Attivazione</dt><dd className="font-semibold">{info.licenza?.data_attivazione||"—"}</dd></div>
         <div><dt className="text-slate-500">Scadenza</dt><dd className="font-semibold">{info.licenza?.data_scadenza||"Non indicata"}</dd></div>
         <div><dt className="text-slate-500">Accesso al modulo AML</dt><dd className="font-semibold">{hasModule("aml")?"Abilitato":"Non abilitato"}</dd></div>
-        <div><dt className="text-slate-500">Tipologia licenza</dt><dd className="font-semibold">{amlOnly?"AML autonoma":"AML incluso nel piano SMP"}</dd></div>
+        <div><dt className="text-slate-500">Tipologia licenza</dt><dd className="font-semibold">{amlOnly?"AML autonoma":hasModule("aml")?"AML abilitato per lo studio":"AML non acquistato"}</dd></div>
       </dl>
       <p className="border-t pt-4 text-xs text-slate-500">Solo consultazione: nessuna richiesta di attivazione, approvazione, creazione di credenziali o modifica degli abbonamenti è consentita da questa pagina.</p>
     </section>}

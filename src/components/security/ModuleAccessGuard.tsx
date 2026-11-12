@@ -68,6 +68,7 @@ export function ModuleAccessGuard({ children }: { children: ReactNode }) {
         <p className="mt-3 text-slate-600">
           Il modulo <strong>{protectedModule.label}</strong> non è incluso nella licenza attiva di questo studio.
         </p>
+        {protectedModule.modulo === "aml" && <a href="https://studiomanagerpro.it/aml#prezzi" target="_blank" rel="noopener noreferrer" className="mt-5 inline-block rounded-lg border border-blue-200 bg-blue-50 px-5 py-2.5 font-semibold text-blue-700">Scopri e acquista AML PRO separatamente</a>}
         <button
           type="button"
           className="mt-6 rounded-lg bg-slate-900 px-5 py-2.5 font-medium text-white"

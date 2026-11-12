@@ -46,6 +46,8 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [piano, setPiano] = useState<string | null>(null);
   const [addons, setAddons] = useState<string[]>([]);
+  const [licensingVersion, setLicensingVersion] = useState<string | null>(null);
+  const [amlLicenseActive, setAmlLicenseActive] = useState(false);
   const initializedRef = useRef(false);
   const loadInFlightRef = useRef(false);
   const loadedUserIdRef = useRef<string | null>(null);
@@ -116,6 +118,20 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
 
       setPiano(licenza?.piano ? String(licenza.piano) : null);
       setAddons(leggiAddons(licenza?.note));
+      let parsedNotes: any = {};
+      try { parsedNotes = typeof licenza?.note === "string" ? JSON.parse(licenza.note) : licenza?.note || {}; } catch {}
+      setLicensingVersion(String(parsedNotes?.licensing_version || "1"));
+      // La licenza AML separata è per studio; non sovrascrive mai la licenza SMP.
+      // In caso di tabella non ancora migrata o di errore, l'accesso resta negato.
+      const { data: amlLicense, error: amlError } = await db
+        .from("tbaml_licenze")
+        .select("stato,data_scadenza")
+        .eq("studio_id", resolvedStudioId)
+        .eq("stato", "attivo")
+        .limit(1)
+        .maybeSingle();
+      const validExpiry = Boolean(amlLicense?.data_scadenza && String(amlLicense.data_scadenza) >= new Date().toISOString().slice(0,10));
+      setAmlLicenseActive(!amlError && validExpiry);
     } catch (error) {
       console.error("[StudioContext] Impossibile risolvere il tenant:", error);
       if (initialLoad) {
@@ -141,6 +157,8 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         setStudioId(null);
         setPiano(null);
         setAddons([]);
+        setLicensingVersion(null);
+        setAmlLicenseActive(false);
         setIsLoading(false);
         return;
       }
@@ -159,12 +177,12 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
 
   const hasModule = useCallback((modulo: ModuloLicenza) => {
     const p = normalizzaPiano(piano);
+    if (modulo === "aml") return isAmlStandalonePlan(p) || addons.includes("aml") || amlLicenseActive || (p.includes("full") && licensingVersion !== "2");
     if (p.includes("full")) return true;
-    if (modulo === "aml") return isAmlStandalonePlan(p) || addons.includes("aml");
     if (modulo === "revisione") return addons.includes("revisione") || addons.includes("revisione_controllo");
     if (modulo === "controllo_gestione") return addons.includes("controllo_gestione");
     return false;
-  }, [piano, addons]);
+  }, [piano, addons, amlLicenseActive, licensingVersion]);
 
   const amlOnly = isAmlStandalonePlan(piano);
   const value = useMemo(
