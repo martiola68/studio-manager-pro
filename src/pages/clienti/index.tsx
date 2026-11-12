@@ -1541,6 +1541,18 @@ attivo: clienteData.attivo ?? true,
 
  };
 
+// La Rubrica può aprire direttamente la modifica di un'anagrafica cliente.
+useEffect(() => {
+  if (!router.isReady || loading) return;
+  const id = typeof router.query.modifica === "string" ? router.query.modifica : "";
+  if (!id) return;
+  const record = clienti.find((row) => String(row.id) === id);
+  if (!record) return;
+  // Consuma il comando prima di aprire la modale, così non si riapre al salvataggio.
+  void router.replace("/clienti", undefined, { shallow: true });
+  void handleEdit(record);
+}, [router.isReady, router.query.modifica, loading, clienti]);
+
 const syncClienteToContatto = async (
   clienteId: string,
   clienteData: Partial<ClienteInsert | ClienteUpdate>
