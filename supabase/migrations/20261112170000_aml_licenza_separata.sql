@@ -32,3 +32,36 @@ USING (EXISTS (
  WHERE u.studio_id = tbaml_licenze.studio_id AND u.user_id = auth.uid() AND u.attivo = true
 ));
 COMMENT ON TABLE public.tbaml_licenze IS 'Licenza AML indipendente da SMP; modifiche consentite solo ad API amministrative dopo pagamento verificato.';
+
+-- Database-side enforcement: protected even when an API forgets its client guard.
+-- Counts all recorded practices (open and closed). The row lock prevents concurrent
+-- inserts from exceeding the purchased capacity.
+CREATE OR REPLACE FUNCTION public.aml_enforce_practice_license()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp AS $fn$
+DECLARE
+  licensed public.tbaml_licenze%ROWTYPE;
+  used_count bigint;
+BEGIN
+  SELECT * INTO licensed FROM public.tbaml_licenze
+    WHERE studio_id = NEW.studio_id
+      AND stato = 'attivo'
+      AND data_attivazione <= CURRENT_DATE
+      AND data_scadenza >= CURRENT_DATE
+    FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Licenza AML non attiva o scaduta per questo studio' USING ERRCODE = '42501';
+  END IF;
+  IF licensed.pratiche_incluse IS NOT NULL THEN
+    SELECT COUNT(*) INTO used_count FROM public."tbPraticheAML" WHERE studio_id = NEW.studio_id;
+    IF used_count >= licensed.pratiche_incluse THEN
+      RAISE EXCEPTION 'Limite pratiche AML raggiunto per il piano %: %', licensed.piano, licensed.pratiche_incluse USING ERRCODE = '23514';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$fn$;
+DROP TRIGGER IF EXISTS enforce_practice_aml_license ON public."tbPraticheAML";
+CREATE TRIGGER enforce_practice_aml_license BEFORE INSERT ON public."tbPraticheAML"
+FOR EACH ROW EXECUTE FUNCTION public.aml_enforce_practice_license();
+REVOKE ALL ON FUNCTION public.aml_enforce_practice_license() FROM PUBLIC;
