@@ -342,7 +342,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       >();
 
       for (const u of personeIncluse) {
-        const s = stato.get(String(u.id));
+        const permessiDelGiorno = permessiApprovati.get(String(u.id));
+        const s = stato.get(String(u.id)) ||
+          (permessiDelGiorno?.length
+            ? { codice: "Permesso", descrizione: "Permesso approvato", fascePermesso: permessiDelGiorno }
+            : undefined);
         if (!s) continue;
 
         const settore = String(u.settore || "Senza settore").trim() || "Senza settore";
