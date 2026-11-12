@@ -1,3 +1,4 @@
+import { checkAmlLicense } from "@/lib/aml/checkLicense";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { verifyAV7AccessProof } from "@/lib/aml/av7AccessProof";
@@ -49,6 +50,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const studioId = utente.studio_id;
+    const entitlement = await checkAmlLicense(String(studioId));
+    if (!entitlement.allowed) return res.status(403).json({ok:false,error:entitlement.reason});
     const {
       cliente_id,
       societa_id,
