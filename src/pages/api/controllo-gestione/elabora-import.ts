@@ -497,18 +497,23 @@ const righeUtili =
         );
 
       /*
-       * Il segno dell'importazione viene preservato, qualunque sia
-       * la voce assegnata. Una posta negativa diminuisce la propria
-       * sezione: fondi ammortamento nell'attivo, carte nei debiti,
-       * e analogamente per tutte le altre voci.
-       *
-       * Non spostiamo importi tra sezioni e non usiamo Math.abs().
+       * Importi negativi rettificativi (fondi ammortamento, carte)
+       * diminuiscono la loro sezione. Per i finanziamenti M/L termine,
+       * i saldi in Avere sono prima normalizzati nella convenzione
+       * positiva delle passivita'. Non trasferiamo importi tra sezioni.
        */
-      if (importo < 0 && voce.codice === "SP_DEBITI_BANCHE_BT") {
-        riduzioniDebitiBancariBt += -importo;
-      }
-      if (importo < 0 && voce.codice === "SP_DEBITI_BANCHE_MLT") {
+      // ATTENZIONE AL SEGNO PROVENIENTE DAL GESTIONALE CONTABILE:
+      // i mutui/finanziamenti a M/L termine sono saldi in AVERE e
+      // possono arrivare col segno meno anche quando sono veri debiti.
+      // Prima normalizziamo tali passivita' in positivo. Solo dopo
+      // applichiamo la somma algebrica delle voci, senza riclassificarle.
+      // Le rettifiche di debiti a breve (es. carta -1.767,22) restano
+      // invece negative e diminuiscono la sezione, come richiesto.
+      if (voce.codice === "SP_DEBITI_BANCHE_MLT" && importo < 0) {
         riduzioniDebitiBancariMlt += -importo;
+        importo = -importo;
+      } else if (voce.codice === "SP_DEBITI_BANCHE_BT" && importo < 0) {
+        riduzioniDebitiBancariBt += -importo;
       }
 
       const corrente =
@@ -833,8 +838,8 @@ if (deleteSaldiError) {
     );
     const ripartoConSegniDaRettificare =
       integrazionePresente &&
-      riduzioniDebitiBancari > 0 &&
-      Math.abs(round2(scartoRiparto - 2 * riduzioniDebitiBancari)) <= 0.01;
+      riduzioniDebitiBancariBt > 0 &&
+      Math.abs(round2(scartoRiparto - 2 * riduzioniDebitiBancariBt)) <= 0.01;
 
     const debitiFinanziariBt = round2(
       debitiFinanziariBtSalvati -
@@ -842,7 +847,7 @@ if (deleteSaldiError) {
     );
     const debitiFinanziariMlt = round2(
       debitiFinanziariMltSalvati -
-      (ripartoConSegniDaRettificare ? 2 * riduzioniDebitiBancariMlt : 0)
+      0
     );
 
     const debitiFinanziariManuali =
