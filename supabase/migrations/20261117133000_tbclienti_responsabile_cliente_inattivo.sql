@@ -12,4 +12,4 @@ ALTER TABLE public.tbclienti
     OR utente_operatore_id IS NOT NULL
     OR utente_payroll_id IS NOT NULL
     OR utente_consulenza_id IS NOT NULL
-  );
+  ) NOT VALID;
