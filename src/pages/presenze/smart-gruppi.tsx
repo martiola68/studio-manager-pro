@@ -158,11 +158,20 @@ const [studioId, setStudioId] = useState("");
     return utenti.filter((u) => !utentiSelezionati.includes(u.id));
   }, [utenti, utentiSelezionati]);
 
+  // I componenti già salvati devono restare visibili anche quando il
+  // filtro settore/rapporto non li include nella lista degli utenti disponibili.
   const utentiNelGruppo = useMemo(() => {
-    return utentiSelezionati
-      .map((id) => utenti.find((u) => u.id === id))
+    const gruppoModificato = gruppi.find((g) => g.id === gruppoInModifica);
+    const associati = (gruppoModificato?.utenti || [])
+      .map((rel) => rel.utente)
       .filter(Boolean) as Utente[];
-  }, [utenti, utentiSelezionati]);
+    const archivio = new Map<string, Utente>();
+    for (const utente of associati) archivio.set(utente.id, utente);
+    for (const utente of utenti) archivio.set(utente.id, utente);
+    return utentiSelezionati.map((id) => archivio.get(id) || ({
+      id, nome: "Utente", cognome: "già assegnato", email: "",
+    } as Utente));
+  }, [utenti, utentiSelezionati, gruppi, gruppoInModifica]);
 
   const gruppoCorrente = useMemo(() => {
     return gruppi.find((g) => g.id === gruppoSelezionato) || null;
@@ -545,8 +554,8 @@ const [studioId, setStudioId] = useState("");
             <option value={3}>3 giorni presenza/settimana</option>
           </select>}
 
-          <div className="border rounded p-3 space-y-3">
-            <h3 className="font-semibold text-[14px]">Utenti gruppo</h3>
+          <div className="border rounded p-3 space-y-3 smart-group-members-section">
+            <h3 className="font-semibold text-[14px]">Utenti gruppo ({utentiSelezionati.length})</h3>
 
             <div className="flex gap-2">
               <select
