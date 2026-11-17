@@ -465,6 +465,11 @@ const righeUtili =
         }
       >();
 
+    // I saldi negativi che risultano mappati come debiti bancari
+    // sono partite creditorie, non debiti da rendere positivi con abs().
+    let creditiDaSaldiBancariBt = 0;
+    let creditiDaSaldiBancariMlt = 0;
+
     for (
       const row of
       righeUtili
@@ -488,22 +493,29 @@ const righeUtili =
         );
 
       /*
-       * BANCHE
+       * DEBITI BANCARI CON SALDO CREDITORE
        *
-       * Una banca passiva arriva dalla contabilità
-       * con segno negativo/Avere.
+       * Esempio: carta di credito con saldo -1.767,22.
+       * La voce non è un debito di +1.767,22: è un credito
+       * di +1.767,22 da spostare nell'attivo corrente.
+       * Una conversione con Math.abs() falserebbe la
+       * quadratura di 2 x 1.767,22 = 3.534,44.
        *
-       * Una volta riclassificata tra i debiti bancari
-       * deve essere esposta come valore positivo.
+       * Manteniamo intatto lo staging contabile originale.
+       * Le sole posizioni con saldo > 0 restano nei debiti.
        */
       if (
-        voce.codice ===
-          "SP_DEBITI_BANCHE_BT" ||
-        voce.codice ===
-          "SP_DEBITI_BANCHE_MLT"
+        voce.codice === "SP_DEBITI_BANCHE_BT" ||
+        voce.codice === "SP_DEBITI_BANCHE_MLT"
       ) {
-        importo =
-          Math.abs(importo);
+        if (importo < 0) {
+          if (voce.codice === "SP_DEBITI_BANCHE_BT") {
+            creditiDaSaldiBancariBt += -importo;
+          } else {
+            creditiDaSaldiBancariMlt += -importo;
+          }
+          importo = 0;
+        }
       }
 
       const corrente =
@@ -753,17 +765,21 @@ if (deleteSaldiError) {
      * 9. STATO PATRIMONIALE
      * =====================================================
      */
-    const totaleAttivo =
-      sommaPerSezione(
-        saldi,
-        "stato_patrimoniale_attivo"
-      );
+    const creditiDaSaldiBancari = round2(
+      creditiDaSaldiBancariBt + creditiDaSaldiBancariMlt
+    );
 
-    const attivoCorrente =
-      sommaPerMacrovoce(
-        saldi,
-        "attivo_corrente"
-      );
+    // Riclassificazione patrimoniale (non altera le voci importate):
+    // somma i saldi bancari creditori ai crediti dell'attivo corrente.
+    const totaleAttivo = round2(
+      sommaPerSezione(saldi, "stato_patrimoniale_attivo") +
+        creditiDaSaldiBancari
+    );
+
+    const attivoCorrente = round2(
+      sommaPerMacrovoce(saldi, "attivo_corrente") +
+        creditiDaSaldiBancari
+    );
 
     const disponibilitaLiquide =
       importoCodice(
@@ -809,23 +825,34 @@ if (deleteSaldiError) {
     const integrazionePresente =
       Boolean(integrazione);
 
-    const debitiFinanziariBt =
-      integrazionePresente
-        ? Number(
-            integrazione
-              ?.debiti_finanziari_bt ||
-              0
-          )
-        : debitiBancheBtContabili;
+    const debitiFinanziariBtSalvati = integrazionePresente
+      ? Number(integrazione?.debiti_finanziari_bt || 0)
+      : debitiBancheBtContabili;
+    const debitiFinanziariMltSalvati = integrazionePresente
+      ? Number(integrazione?.debiti_finanziari_mlt || 0)
+      : debitiBancheMltContabili;
 
-    const debitiFinanziariMlt =
-      integrazionePresente
-        ? Number(
-            integrazione
-              ?.debiti_finanziari_mlt ||
-              0
-          )
-        : debitiBancheMltContabili;
+    // Le integrazioni storiche possono essere state compilate quando
+    // il motore convertiva erroneamente i crediti bancari in debiti.
+    // Correggiamo SOLO quando lo scarto coincide esattamente con
+    // quei saldi, senza alterare altri riparti manuali.
+    const ripartoStoricoIncludeCrediti = integrazionePresente &&
+      creditiDaSaldiBancari > 0 &&
+      Math.abs(round2(
+        debitiFinanziariBtSalvati +
+        debitiFinanziariMltSalvati -
+        debitiFinanziariContabili -
+        creditiDaSaldiBancari
+      )) <= 0.01;
+
+    const debitiFinanziariBt = round2(
+      debitiFinanziariBtSalvati -
+      (ripartoStoricoIncludeCrediti ? creditiDaSaldiBancariBt : 0)
+    );
+    const debitiFinanziariMlt = round2(
+      debitiFinanziariMltSalvati -
+      (ripartoStoricoIncludeCrediti ? creditiDaSaldiBancariMlt : 0)
+    );
 
     const debitiFinanziariManuali =
       round2(
@@ -1408,6 +1435,8 @@ revisione_controllo_id:
 
         debiti_finanziari_contabili:
           debitiFinanziariContabili,
+
+        crediti_da_saldi_bancari: creditiDaSaldiBancari,
 
         debiti_finanziari_bt:
           round2(
