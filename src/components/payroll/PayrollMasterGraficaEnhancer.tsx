@@ -181,6 +181,20 @@ export function PayrollMasterGraficaEnhancer() {
       .payroll-master-page.payroll-smart-groups-page .smart-new-group-card {
         padding: 12px !important;
       }
+      /* Il modulo di modifica deve scorrere autonomamente, senza essere
+         coperto dalla tabella dei gruppi configurati sottostante. */
+      .payroll-master-page.payroll-smart-groups-page .smart-new-group-card {
+        max-height: min(76dvh, 850px) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        scrollbar-gutter: stable !important;
+        overscroll-behavior: contain !important;
+      }
+      .payroll-master-page.payroll-smart-groups-page .smart-group-members-section {
+        min-height: 105px !important;
+        max-height: none !important;
+        overflow: visible !important;
+      }
       .payroll-master-page.payroll-smart-groups-page .smart-new-group-card > :not([hidden]) ~ :not([hidden]) {
         margin-top: 10px !important;
       }
