@@ -10,6 +10,7 @@ type ImportRow = {
   id: string;
   voce_id: string | null;
   saldo: number | string | null;
+  codice_conto: string | null;
   mappata: boolean | null;
   esclusa: boolean | null;
 };
