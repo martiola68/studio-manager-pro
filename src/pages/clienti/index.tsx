@@ -521,6 +521,8 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
     "tutti"
   >("attivi");
 
+  const [filtroSettoreElenco,setFiltroSettoreElenco] = useState<"tutti"|"fiscale"|"lavoro"|"consulenza">("tutti");
+  const [filtroPrestazioneElenco,setFiltroPrestazioneElenco] = useState("tutte");
   const [showStampaModal, setShowStampaModal] = useState(false);
   const [stampaPrestazioniOpen, setStampaPrestazioniOpen] = useState(false);
 
@@ -1083,6 +1085,20 @@ if (filtroClienti === "attivi") {
       );
     }
 
+    if (filtroSettoreElenco !== "tutti") {
+      const campo = filtroSettoreElenco === "fiscale" ? "settore_fiscale" :
+        filtroSettoreElenco === "lavoro" ? "settore_lavoro" : "settore_consulenza";
+      filtered = filtered.filter(c => c[campo] === true);
+    }
+
+    if (filtroPrestazioneElenco !== "tutte") {
+      filtered = filtered.filter(c =>
+        filtroPrestazioneElenco === "nessuna"
+          ? !c.tipo_prestazione_id
+          : String(c.tipo_prestazione_id || "") === filtroPrestazioneElenco
+      );
+    }
+
     if (selectedUtenteFiscale !== "all") {
       filtered = filtered.filter(
         (c) => c.utente_operatore_id === selectedUtenteFiscale
@@ -1101,6 +1117,8 @@ if (filtroClienti === "attivi") {
   filtroClienti,
   searchTerm,
   selectedLetter,
+  filtroSettoreElenco,
+  filtroPrestazioneElenco,
   selectedUtenteFiscale,
   selectedUtentePayroll,
 ]);
@@ -3252,8 +3270,8 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
     <CardTitle className="text-base">Ricerca e Filtri</CardTitle>
   </CardHeader>
   <CardContent className="space-y-3 px-4 pb-3 pt-0">
-    <div className="flex flex-col md:flex-row gap-4">
-      <div className="relative flex-1">
+    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-[minmax(240px,2fr)_minmax(145px,1fr)_minmax(135px,.85fr)_minmax(180px,1.15fr)_minmax(145px,1fr)_minmax(145px,1fr)]">
+      <div className="relative min-w-0">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
         <Input
           placeholder="Cerca per ragione sociale, P.IVA, CF o Codice Cliente..."
@@ -3276,7 +3294,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   )
 }
 >
-  <SelectTrigger className="w-full md:w-[230px] h-9">
+  <SelectTrigger className="w-full min-w-0 h-9">
     <SelectValue />
   </SelectTrigger>
 
@@ -3303,11 +3321,30 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   </SelectContent>
 </Select>
 
+<Select value={filtroSettoreElenco} onValueChange={value=>setFiltroSettoreElenco(value as "tutti"|"fiscale"|"lavoro"|"consulenza")}>
+  <SelectTrigger className="h-9 w-full min-w-0"><SelectValue placeholder="Settore" /></SelectTrigger>
+  <SelectContent>
+    <SelectItem value="tutti">Tutti i settori</SelectItem>
+    <SelectItem value="fiscale">Fiscale</SelectItem>
+    <SelectItem value="lavoro">Lavoro</SelectItem>
+    <SelectItem value="consulenza">Consulenza</SelectItem>
+  </SelectContent>
+</Select>
+
+<Select value={filtroPrestazioneElenco} onValueChange={setFiltroPrestazioneElenco}>
+  <SelectTrigger className="h-9 w-full min-w-0"><SelectValue placeholder="Tipo prestazione" /></SelectTrigger>
+  <SelectContent>
+    <SelectItem value="tutte">Tutte le prestazioni</SelectItem>
+    <SelectItem value="nessuna">Nessuna prestazione</SelectItem>
+    {prestazioni.map(p=><SelectItem key={p.id} value={p.id}>{safeString(p.descrizione)}</SelectItem>)}
+  </SelectContent>
+</Select>
+
 <Select
   value={selectedUtenteFiscale}
   onValueChange={setSelectedUtenteFiscale}
 >
-        <SelectTrigger className="w-full md:w-[200px] h-9">
+        <SelectTrigger className="w-full min-w-0 h-9">
           <SelectValue placeholder="Utente Fiscale" />
         </SelectTrigger>
         <SelectContent>
@@ -3382,7 +3419,9 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
           {searchTerm ||
           selectedLetter !== "Tutti" ||
           selectedUtenteFiscale !== "all" ||
-          selectedUtentePayroll !== "all"
+          selectedUtentePayroll !== "all" ||
+          filtroSettoreElenco !== "tutti" ||
+          filtroPrestazioneElenco !== "tutte"
             ? "Prova a modificare i filtri di ricerca"
             : "Inizia aggiungendo il tuo primo cliente"}
         </p>
