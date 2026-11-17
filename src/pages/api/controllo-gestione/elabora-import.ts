@@ -447,6 +447,42 @@ const righeUtili =
       (vociData ||
         []) as VoceRow[];
 
+    // Solo i due conti individuati nella riconciliazione Happy 30/09/2026:
+    // recuperiamo le destinazioni corrette nell'attivo (senza toccare
+    // mappature globali, finanziamenti, fondi ammortamento o altri clienti).
+    const contiDaRettificare = new Set(["1201010", "440102015"]);
+    const servonoVociAttivo = righeUtili.some(row =>
+      contiDaRettificare.has(String(row.codice_conto || "").trim()) &&
+      row.dati_originali?.sezione === "SP_ATTIVO" &&
+      Number(row.saldo || 0) > 0 &&
+      voci.some(voce => voce.id === row.voce_id &&
+        voce.sezione === "stato_patrimoniale_passivo")
+    );
+    let voceBancaAttivo: VoceRow | undefined;
+    let voceErarioAttivo: VoceRow | undefined;
+    if (servonoVociAttivo) {
+      const { data: attive, error: erroreAttivo } = await supabaseAdmin
+        .from("tbcontrollo_gestione_voci")
+        .select("id,codice,descrizione,sezione,macrovoce,natura,ordine")
+        .eq("sezione", "stato_patrimoniale_attivo")
+        .eq("attiva", true);
+      if (erroreAttivo) throw erroreAttivo;
+      const tutteAttivo = (attive || []) as VoceRow[];
+      voceBancaAttivo = tutteAttivo.find(v =>
+        v.codice === "SP_DISPONIBILITA_LIQUIDE"
+      ) || tutteAttivo.find(v => /disponibilita liquide|banche attive/i.test(
+        v.descrizione.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      ));
+      voceErarioAttivo = tutteAttivo.find(v =>
+        /crediti.*tributari|crediti.*erario|crediti.*impost/i.test(
+          v.descrizione.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+        )
+      ) || tutteAttivo.find(v => /crediti verso altri|altri crediti/i.test(v.descrizione.toLowerCase()));
+      if (!voceBancaAttivo || !voceErarioAttivo) {
+        throw new Error("Riclassificazione 30/09/2026: manca una voce attiva per banca o crediti tributari. Verificare il piano voci.");
+      }
+    }
+
     const vociMap =
       new Map(
         voci.map(
@@ -462,6 +498,11 @@ const righeUtili =
      * 6. AGGREGAZIONE PER VOCE
      * =====================================================
      */
+    const correzioniRiclassificazione: Array<{
+      codice: string; conto: string; importo: number; voce_originale: string; voce_corretta: string;
+    }> = [];
+    const overridePerConto = new Map<string, VoceRow>();
+
     const aggregati =
       new Map<
         string,
@@ -479,10 +520,26 @@ const righeUtili =
         continue;
       }
 
-      const voce =
-        vociMap.get(
-          row.voce_id
-        );
+      const voceIniziale = vociMap.get(row.voce_id);
+      let voce = voceIniziale;
+      const codice = String(row.codice_conto || "").trim();
+      if (
+        voceIniziale?.sezione === "stato_patrimoniale_passivo" &&
+        row.dati_originali?.sezione === "SP_ATTIVO" &&
+        Number(row.saldo || 0) > 0
+      ) {
+        const corretta = codice === "1201010" ? voceBancaAttivo :
+          codice === "440102015" ? voceErarioAttivo : undefined;
+        if (corretta) {
+          voce = corretta;
+          vociMap.set(corretta.id, corretta);
+          overridePerConto.set(row.id, corretta);
+          correzioniRiclassificazione.push({
+            codice, conto: String(row.descrizione_conto || ""), importo: Number(row.saldo || 0),
+            voce_originale: voceIniziale.descrizione, voce_corretta: corretta.descrizione,
+          });
+        }
+      }
 
       if (!voce) {
         continue;
@@ -519,7 +576,7 @@ const righeUtili =
 
       const corrente =
         aggregati.get(
-          row.voce_id
+          voce.id
         ) || {
           importo: 0,
           numero_conti: 0,
@@ -532,7 +589,7 @@ const righeUtili =
         1;
 
       aggregati.set(
-        row.voce_id,
+        voce.id,
         corrente
       );
     }
@@ -610,7 +667,8 @@ const righeUtili =
     const controlloConti = righe
       .filter(row => row.dati_originali?.sezione)
       .map(row => {
-        const voce = row.voce_id ? vociMap.get(row.voce_id) : undefined;
+        const voce = overridePerConto.get(row.id) ||
+          (row.voce_id ? vociMap.get(row.voce_id) : undefined);
         const importo = Number(row.saldo || 0);
         const origine = round2(importo * segnoOrigine(String(row.dati_originali?.sezione || "")));
         const destinazione = voce && row.esclusa !== true
@@ -1401,6 +1459,7 @@ revisione_controllo_id:
         importRecord.data_riferimento,
 
       diagnosi_quadratura: {
+        correzioni_applicate: correzioniRiclassificazione,
         scarto_sezioni: scartoSezioni,
         conti_da_verificare: anomalieRiclassificazione,
         totale_righe: controlloConti.length,
