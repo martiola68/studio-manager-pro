@@ -1427,7 +1427,7 @@ revisione_controllo_id:
         debiti_finanziari_contabili:
           debitiFinanziariContabili,
 
-        crediti_da_saldi_bancari: creditiDaSaldiBancari,
+        riduzioni_debiti_bancari: riduzioniDebitiBancari,
 
         debiti_finanziari_bt:
           round2(
