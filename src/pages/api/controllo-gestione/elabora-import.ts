@@ -11,6 +11,8 @@ type ImportRow = {
   voce_id: string | null;
   saldo: number | string | null;
   codice_conto: string | null;
+  descrizione_conto: string | null;
+  dati_originali: { sezione?: string; livello?: string } | null;
   mappata: boolean | null;
   esclusa: boolean | null;
 };
@@ -133,6 +135,8 @@ async function leggiTutteLeRigheImport(
         voce_id,
         saldo,
         codice_conto,
+        descrizione_conto,
+        dati_originali,
         mappata,
         esclusa
       `)
@@ -584,6 +588,50 @@ const righeUtili =
             a.ordine -
             b.ordine
         );
+
+    /*
+     * Diagnosi della quadratura, senza modificare i saldi:
+     * confronta il contributo di ogni conto nella sezione origine Happy
+     * con quello della destinazione riclassificata SMP.
+     */
+    const segnoOrigine = (sezione: string): number =>
+      sezione === "SP_ATTIVO" || sezione === "CE_COSTI" ? 1 :
+      sezione === "SP_PASSIVO" || sezione === "CE_RICAVI" ? -1 : 0;
+    const segnoDestinazione = (voce: VoceRow): number => {
+      if (voce.sezione === "stato_patrimoniale_attivo") return 1;
+      if (voce.sezione === "stato_patrimoniale_passivo") return -1;
+      if (voce.macrovoce === "ricavi" ||
+          voce.codice === "CE_PROVENTI_FINANZIARI") return -1;
+      if (voce.codice.startsWith("CE_") ||
+          ["costi_operativi", "ammortamenti", "accantonamenti", "imposte"]
+            .includes(voce.macrovoce || "")) return 1;
+      return 0;
+    };
+    const controlloConti = righe
+      .filter(row => row.dati_originali?.sezione)
+      .map(row => {
+        const voce = row.voce_id ? vociMap.get(row.voce_id) : undefined;
+        const importo = Number(row.saldo || 0);
+        const origine = round2(importo * segnoOrigine(String(row.dati_originali?.sezione || "")));
+        const destinazione = voce && row.esclusa !== true
+          ? round2(importo * segnoDestinazione(voce))
+          : 0;
+        return {
+          codice: String(row.codice_conto || ""),
+          conto: String(row.descrizione_conto || ""),
+          sezione_happy: String(row.dati_originali?.sezione || ""),
+          voce_smp: String(voce?.descrizione || (row.esclusa ? "Escluso" : "Non classificato")),
+          sezione_smp: String(voce?.sezione || ""),
+          saldo: round2(importo),
+          differenza: round2(destinazione - origine),
+        };
+      });
+    const anomalieRiclassificazione = controlloConti
+      .filter(row => Math.abs(row.differenza) > 0.009)
+      .sort((a, b) => Math.abs(b.differenza) - Math.abs(a.differenza));
+    const scartoSezioni = round2(
+      controlloConti.reduce((sum, row) => sum + row.differenza, 0)
+    );
 
 /*
  * =====================================================
@@ -1351,6 +1399,14 @@ revisione_controllo_id:
   
       data_riferimento:
         importRecord.data_riferimento,
+
+      diagnosi_quadratura: {
+        scarto_sezioni: scartoSezioni,
+        conti_da_verificare: anomalieRiclassificazione,
+        totale_righe: controlloConti.length,
+        debiti_finanziari_contabili: debitiFinanziariContabili,
+        debiti_finanziari_ripartiti: debitiFinanziariManuali,
+      },
 
       saldi,
 
