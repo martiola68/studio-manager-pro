@@ -1038,6 +1038,28 @@ if ((organiRes as Response).ok) {
 }, [studioId, loadData]);
 
 
+const senzaPrestazione = (cliente: ClienteRow) => {
+  const valore = String(cliente.tipo_prestazione_id || "").trim().toLowerCase();
+  return !valore || valore === "none" || valore === "null";
+};
+
+// Il conteggio comprende tutte le anagrafiche caricate nello studio,
+// anche quelle nascoste dai filtri correnti.
+const nominativiSenzaPrestazione = useMemo(
+  () => clienti.filter(senzaPrestazione).length,
+  [clienti]
+);
+
+const mostraNominativiSenzaPrestazione = () => {
+  setFiltroClienti("tutti");
+  setFiltroSettoreElenco("tutti");
+  setFiltroPrestazioneElenco("nessuna");
+  setSelectedUtenteFiscale("all");
+  setSelectedUtentePayroll("all");
+  setSelectedLetter("Tutti");
+  setSearchTerm("");
+};
+
 const filteredClienti = useMemo(() => {
   let filtered = [...clienti];
 
@@ -1098,7 +1120,7 @@ if (filtroClienti === "attivi") {
     if (filtroPrestazioneElenco !== "tutte") {
       filtered = filtered.filter(c =>
         filtroPrestazioneElenco === "nessuna"
-          ? !c.tipo_prestazione_id
+          ? senzaPrestazione(c)
           : String(c.tipo_prestazione_id || "") === filtroPrestazioneElenco
       );
     }
@@ -3415,6 +3437,21 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   </CardContent>
 </Card>
 
+{/* Avviso e ricerca rapida dei nominativi privi di prestazione */}
+<div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm">
+  <span className="text-amber-950">
+    <strong>{nominativiSenzaPrestazione}</strong> nominativi senza tipo prestazione assegnato
+    {filtroPrestazioneElenco === "nessuna" && (
+      <span className="ml-2 text-amber-800">· {filteredClienti.length} visualizzati</span>
+    )}
+  </span>
+  <Button type="button" variant="outline" size="sm"
+    className="border-amber-500 bg-white text-amber-950 hover:bg-amber-100"
+    onClick={mostraNominativiSenzaPrestazione}>
+    Mostra tutti senza prestazione
+  </Button>
+</div>
+
 {/* TABELLA */}
 <Card>
   <CardContent className="p-0">
@@ -3496,7 +3533,15 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
                   className="w-[360px] px-3 font-medium truncate"
                     title={cliente.ragione_sociale || ""}
                   >
-                    {cliente.ragione_sociale}
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate">{cliente.ragione_sociale}</span>
+                      {senzaPrestazione(cliente) && (
+                        <span className="shrink-0 rounded border border-amber-400 bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-950"
+                          title="Nessun tipo prestazione associato a questo nominativo">
+                          Senza prestazione
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
 
                   <TableCell className="w-[165px] px-3 text-left align-middle">
