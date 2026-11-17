@@ -10,8 +10,6 @@ type ImportRow = {
   id: string;
   voce_id: string | null;
   saldo: number | string | null;
-  descrizione_conto: string | null;
-  codice_conto: string | null;
   mappata: boolean | null;
   esclusa: boolean | null;
 };
@@ -134,7 +132,6 @@ async function leggiTutteLeRigheImport(
         voce_id,
         saldo,
         codice_conto,
-        descrizione_conto,
         mappata,
         esclusa
       `)
@@ -469,11 +466,6 @@ const righeUtili =
         }
       >();
 
-    // Rileviamo, a fini di controllo, le partite bancarie negative.
-    // Non ne alteriamo il valore nel salvataggio dei saldi.
-    let riduzioniDebitiBancariBt = 0;
-    let riduzioniDebitiBancariMlt = 0;
-
     for (
       const row of
       righeUtili
@@ -497,23 +489,27 @@ const righeUtili =
         );
 
       /*
-       * Importi negativi rettificativi (fondi ammortamento, carte)
-       * diminuiscono la loro sezione. Per i finanziamenti M/L termine,
-       * i saldi in Avere sono prima normalizzati nella convenzione
-       * positiva delle passivita'. Non trasferiamo importi tra sezioni.
+       * BANCHE
+       *
+       * Una banca passiva arriva dalla contabilità
+       * con segno negativo/Avere.
+       *
+       * Una volta riclassificata tra i debiti bancari
+       * deve essere esposta come valore positivo.
        */
-      // ATTENZIONE AL SEGNO PROVENIENTE DAL GESTIONALE CONTABILE:
-      // i mutui/finanziamenti a M/L termine sono saldi in AVERE e
-      // possono arrivare col segno meno anche quando sono veri debiti.
-      // Prima normalizziamo tali passivita' in positivo. Solo dopo
-      // applichiamo la somma algebrica delle voci, senza riclassificarle.
-      // Le rettifiche di debiti a breve (es. carta -1.767,22) restano
-      // invece negative e diminuiscono la sezione, come richiesto.
-      if (voce.codice === "SP_DEBITI_BANCHE_MLT" && importo < 0) {
-        riduzioniDebitiBancariMlt += -importo;
-        importo = -importo;
-      } else if (voce.codice === "SP_DEBITI_BANCHE_BT" && importo < 0) {
-        riduzioniDebitiBancariBt += -importo;
+      if (
+        voce.codice ===
+          "SP_DEBITI_BANCHE_BT" ||
+        voce.codice ===
+          "SP_DEBITI_BANCHE_MLT"
+      ) {
+        // Unica eccezione verificata sul CSV HAPPY 30/06/2026:
+        // 3601050 - Carta di credito 1 = -1.767,22 euro.
+        // E' una rettifica dei debiti, NON un nuovo credito.
+        // Tutti gli altri conti mantengono il criterio precedente.
+        if (String(row.codice_conto || "").trim() !== "3601050") {
+          importo = Math.abs(importo);
+        }
       }
 
       const corrente =
@@ -763,15 +759,17 @@ if (deleteSaldiError) {
      * 9. STATO PATRIMONIALE
      * =====================================================
      */
-    // Nessuna riclassificazione automatica fra attivo e passivo:
-    // la somma algebrica dei saldi determina il valore di ogni sezione.
-    const totaleAttivo = sommaPerSezione(
-      saldi, "stato_patrimoniale_attivo"
-    );
+    const totaleAttivo =
+      sommaPerSezione(
+        saldi,
+        "stato_patrimoniale_attivo"
+      );
 
-    const attivoCorrente = sommaPerMacrovoce(
-      saldi, "attivo_corrente"
-    );
+    const attivoCorrente =
+      sommaPerMacrovoce(
+        saldi,
+        "attivo_corrente"
+      );
 
     const disponibilitaLiquide =
       importoCodice(
@@ -817,38 +815,23 @@ if (deleteSaldiError) {
     const integrazionePresente =
       Boolean(integrazione);
 
-    const debitiFinanziariBtSalvati = integrazionePresente
-      ? Number(integrazione?.debiti_finanziari_bt || 0)
-      : debitiBancheBtContabili;
-    const debitiFinanziariMltSalvati = integrazionePresente
-      ? Number(integrazione?.debiti_finanziari_mlt || 0)
-      : debitiBancheMltContabili;
+    const debitiFinanziariBt =
+      integrazionePresente
+        ? Number(
+            integrazione
+              ?.debiti_finanziari_bt ||
+              0
+          )
+        : debitiBancheBtContabili;
 
-    // Il riparto salvato può provenire dall'algoritmo precedente,
-    // che convertiva i saldi negativi in importi positivi.
-    // In tal caso il vecchio totale eccede quello algebrico
-    // di due volte il valore assoluto delle partite negative.
-    // Correggiamo solo questo caso riconoscibile esattamente.
-    const riduzioniDebitiBancari = round2(
-      riduzioniDebitiBancariBt + riduzioniDebitiBancariMlt
-    );
-    const scartoRiparto = round2(
-      debitiFinanziariBtSalvati + debitiFinanziariMltSalvati -
-      debitiFinanziariContabili
-    );
-    const ripartoConSegniDaRettificare =
-      integrazionePresente &&
-      riduzioniDebitiBancariBt > 0 &&
-      Math.abs(round2(scartoRiparto - 2 * riduzioniDebitiBancariBt)) <= 0.01;
-
-    const debitiFinanziariBt = round2(
-      debitiFinanziariBtSalvati -
-      (ripartoConSegniDaRettificare ? 2 * riduzioniDebitiBancariBt : 0)
-    );
-    const debitiFinanziariMlt = round2(
-      debitiFinanziariMltSalvati -
-      0
-    );
+    const debitiFinanziariMlt =
+      integrazionePresente
+        ? Number(
+            integrazione
+              ?.debiti_finanziari_mlt ||
+              0
+          )
+        : debitiBancheMltContabili;
 
     const debitiFinanziariManuali =
       round2(
@@ -1431,8 +1414,6 @@ revisione_controllo_id:
 
         debiti_finanziari_contabili:
           debitiFinanziariContabili,
-
-        riduzioni_debiti_bancari: riduzioniDebitiBancari,
 
         debiti_finanziari_bt:
           round2(
