@@ -102,6 +102,21 @@ type ElaborazioneResult = {
   import_id: string;
   controllo_id: string | null;
   data_riferimento: string | null;
+  diagnosi_quadratura?: {
+    scarto_sezioni: number;
+    totale_righe: number;
+    debiti_finanziari_contabili: number;
+    debiti_finanziari_ripartiti: number;
+    conti_da_verificare: Array<{
+      codice: string;
+      conto: string;
+      sezione_happy: string;
+      voce_smp: string;
+      sezione_smp: string;
+      saldo: number;
+      differenza: number;
+    }>;
+  };
   saldi: SaldoElaborato[];
   
   conto_economico: {
@@ -2618,6 +2633,45 @@ if (file) {
             )}
           </div>
         </div>
+
+        {elaborazione.diagnosi_quadratura &&
+          Math.abs(elaborazione.conto_economico.differenza_risultato) > 1 && (
+            <details style={{...subCardStyle, marginTop:12, background:"#f8fafc",border:"1px solid #93c5fd"}}>
+              <summary style={{cursor:"pointer",fontWeight:700,color:"#075985"}}>
+                Analisi della squadratura — dettagli conti riclassificati
+              </summary>
+              <p style={{fontSize:12,marginTop:10}}>
+                Confronto diagnostico tra sezioni del CSV Happy e voci SMP.
+                Nessun saldo viene modificato da questa verifica.
+              </p>
+              <p style={{fontSize:12,marginTop:8}}>
+                Scarto contributi per sezione: <strong>{euro(elaborazione.diagnosi_quadratura.scarto_sezioni)}</strong>.
+                {" "}Debiti finanziari contabili: <strong>{euro(elaborazione.diagnosi_quadratura.debiti_finanziari_contabili)}</strong>.
+                {" "}Ripartizione debiti: <strong>{euro(elaborazione.diagnosi_quadratura.debiti_finanziari_ripartiti)}</strong>.
+              </p>
+              <div style={{overflowX:"auto",marginTop:12,maxHeight:360,overflowY:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                  <thead><tr>
+                    {["Conto","Descrizione","Origine","Voce SMP","Saldo","Differenza"].map(h=>
+                      <th key={h} style={{textAlign:"left",padding:7,borderBottom:"1px solid #cbd5e1",background:"#e0f2fe"}}>{h}</th>
+                    )}
+                  </tr></thead>
+                  <tbody>
+                    {elaborazione.diagnosi_quadratura.conti_da_verificare.slice(0,100).map((x,i)=>
+                      <tr key={x.codice+"-"+i}>
+                        <td style={{padding:7,borderBottom:"1px solid #e2e8f0"}}>{x.codice}</td>
+                        <td style={{padding:7,borderBottom:"1px solid #e2e8f0"}}>{x.conto}</td>
+                        <td style={{padding:7,borderBottom:"1px solid #e2e8f0"}}>{x.sezione_happy}</td>
+                        <td style={{padding:7,borderBottom:"1px solid #e2e8f0"}}>{x.voce_smp}</td>
+                        <td style={{padding:7,borderBottom:"1px solid #e2e8f0",whiteSpace:"nowrap"}}>{euro(x.saldo)}</td>
+                        <td style={{padding:7,borderBottom:"1px solid #e2e8f0",whiteSpace:"nowrap"}}>{euro(x.differenza)}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          )}
 
         <h3
           style={{
