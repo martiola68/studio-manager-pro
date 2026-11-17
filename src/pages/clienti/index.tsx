@@ -63,6 +63,8 @@ import {
   BarChart3,
   Calculator,
   TrendingUp,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 import { useStudio } from "@/contexts/StudioContext";
@@ -523,6 +525,8 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [filtroSettoreElenco,setFiltroSettoreElenco] = useState<"tutti"|"fiscale"|"lavoro"|"consulenza">("tutti");
   const [filtroPrestazioneElenco,setFiltroPrestazioneElenco] = useState("tutte");
+  const [periodoContabileOpen,setPeriodoContabileOpen] = useState(false);
+  const [riepilogoClientiOpen,setRiepilogoClientiOpen] = useState(false);
   const [showStampaModal, setShowStampaModal] = useState(false);
   const [stampaPrestazioniOpen, setStampaPrestazioniOpen] = useState(false);
 
@@ -3021,51 +3025,49 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
   </div>
 </div>
 
-{/* PERIODO OPERAZIONI CONTABILI */}
-<Card className="mb-3 border-sky-200 bg-sky-50/40">
-  <CardContent className="flex flex-col gap-2 px-3 py-2 md:flex-row md:items-center md:justify-between">
-    <div>
-      <div className="text-xs font-semibold">Periodo operazioni contabili</div>
-      <div className="text-[11px] text-muted-foreground">
-        Periodo unico per clienti, riepiloghi e confronti.
+{/* PERIODO OPERAZIONI CONTABILI — chiuso all'apertura */}
+<Card className="mb-2 border-sky-200 bg-sky-50/40">
+  <button type="button" className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left"
+    aria-expanded={periodoContabileOpen} onClick={()=>setPeriodoContabileOpen(v=>!v)}>
+    <span className="text-sm font-semibold">Periodo operazioni contabili</span>
+    <span className="flex items-center gap-2 text-xs text-slate-600">
+      Anno chiuso {annoOperazioniRiferimento}
+      {periodoContabileOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+    </span>
+  </button>
+  {periodoContabileOpen && (
+    <CardContent className="border-t px-3 py-3">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div className="text-xs text-muted-foreground">Periodo unico per clienti, riepiloghi e confronti.</div>
+        <div className="grid w-full grid-cols-2 gap-3 md:w-auto">
+          <div>
+            <Label>Anno precedente</Label>
+            <Input value={annoOperazioniRiferimento - 1} disabled className="mt-0.5 h-8 w-full text-sm md:w-[120px]" />
+          </div>
+          <div>
+            <Label>Anno corrente chiuso</Label>
+            <Input type="number" min={2000} max={2100} value={annoOperazioniRiferimento}
+              onChange={e=>setAnnoOperazioniRiferimento(Math.max(2000,Math.min(2100,Number(e.target.value)||new Date().getFullYear()-1)))}
+              className="mt-0.5 h-8 w-full text-sm font-semibold md:w-[130px]" />
+          </div>
+        </div>
       </div>
-    </div>
-
-    <div className="grid w-full grid-cols-2 gap-3 md:w-auto">
-      <div>
-        <Label>Anno precedente</Label>
-        <Input
-          value={annoOperazioniRiferimento - 1}
-          disabled
-          className="mt-0.5 h-8 w-full text-sm md:w-[120px]"
-        />
-      </div>
-
-      <div>
-        <Label>Anno corrente chiuso</Label>
-        <Input
-          type="number"
-          min={2000}
-          max={2100}
-          value={annoOperazioniRiferimento}
-          onChange={(e) =>
-            setAnnoOperazioniRiferimento(
-              Math.max(
-                2000,
-                Math.min(
-                  2100,
-                  Number(e.target.value) || new Date().getFullYear() - 1
-                )
-              )
-            )
-          }
-          className="mt-0.5 h-8 w-full font-semibold text-sm md:w-[130px]"
-        />
-      </div>
-    </div>
-  </CardContent>
+    </CardContent>
+  )}
 </Card>
 
+{/* RIEPILOGO E CARICO CONTABILE — chiuso all'apertura */}
+<Card className="mb-2 border-sky-200 bg-sky-50/40">
+  <button type="button" className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left"
+    aria-expanded={riepilogoClientiOpen} onClick={()=>setRiepilogoClientiOpen(v=>!v)}>
+    <span className="text-sm font-semibold">Riepilogo clienti e carico contabile</span>
+    <span className="flex items-center gap-2 text-xs text-slate-600">
+      {totaleClientiFiltrati} clienti
+      {riepilogoClientiOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+    </span>
+  </button>
+  {riepilogoClientiOpen && (
+    <CardContent className="border-t px-3 pb-2 pt-3">
 {/* STATS */}
 <div className="grid grid-cols-1 gap-2 mb-3 sm:grid-cols-2 xl:grid-cols-5">
   <Card>
@@ -3264,6 +3266,11 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
 )}
 
 
+
+    </CardContent>
+  )}
+</Card>
+
 {/* FILTRI */}
 <Card className="mb-3">
   <CardHeader className="px-4 py-2.5">
@@ -3431,7 +3438,7 @@ window.open(`/api/clienti/stampa-lista?${query}`, "_blank");
         </Button>
       </div>
     ) : (
-      <div className="w-full overflow-x-auto max-h-[75vh]">
+      <div className="w-full min-h-[450px] max-h-[calc(100dvh-310px)] overflow-auto" style={{ minHeight: "min(450px, 62dvh)", maxHeight: "max(450px, calc(100dvh - 310px))" }}>
        
           <Table data-clienti-table className="w-full min-w-[1320px] table-fixed">
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
