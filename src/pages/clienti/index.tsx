@@ -2009,7 +2009,12 @@ await syncClienteToContatto(nuovoCliente.id, {
 
         setIsDialogOpen(false);
         resetForm();
-        await loadData();
+        // In modifica la riga è già aggiornata con setClienti.
+        // Evita il ricaricamento dell'intero archivio (clienti, utenti,
+        // contatti, prestazioni, organi) e conserva filtri e posizione.
+        if (!editingCliente) {
+          await loadData();
+        }
       },
     });
   } catch (error: unknown) {
