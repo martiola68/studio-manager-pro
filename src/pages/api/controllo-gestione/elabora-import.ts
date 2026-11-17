@@ -10,6 +10,8 @@ type ImportRow = {
   id: string;
   voce_id: string | null;
   saldo: number | string | null;
+  descrizione_conto: string | null;
+  codice_conto: string | null;
   mappata: boolean | null;
   esclusa: boolean | null;
 };
@@ -131,6 +133,8 @@ async function leggiTutteLeRigheImport(
         id,
         voce_id,
         saldo,
+        codice_conto,
+        descrizione_conto,
         mappata,
         esclusa
       `)
@@ -465,8 +469,8 @@ const righeUtili =
         }
       >();
 
-    // I saldi negativi che risultano mappati come debiti bancari
-    // sono partite creditorie, non debiti da rendere positivi con abs().
+    // Crediti da singole carte di credito con saldo di segno opposto.
+    // NON convertire indiscriminatamente i debiti finanziari negativi.
     let creditiDaSaldiBancariBt = 0;
     let creditiDaSaldiBancariMlt = 0;
 
@@ -493,28 +497,37 @@ const righeUtili =
         );
 
       /*
-       * DEBITI BANCARI CON SALDO CREDITORE
+       * L'import Datev contiene saldi negativi anche in veri debiti
+       * finanziari: sono convenzioni di segno e NON crediti.
+       * Conserviamo quindi l'originaria esposizione in valore assoluto
+       * per i debiti bancari ordinari.
        *
-       * Esempio: carta di credito con saldo -1.767,22.
-       * La voce non è un debito di +1.767,22: è un credito
-       * di +1.767,22 da spostare nell'attivo corrente.
-       * Una conversione con Math.abs() falserebbe la
-       * quadratura di 2 x 1.767,22 = 3.534,44.
+       * Eccezione: una CARTA DI CREDITO mappata fra i debiti bancari
+       * con saldo negativo (ad es. "Carta di credito 1" -1.767,22)
+       * rappresenta una partita di segno opposto. La storniano dai
+       * debiti e la mostriamo come credito nell'attivo corrente.
        *
-       * Manteniamo intatto lo staging contabile originale.
-       * Le sole posizioni con saldo > 0 restano nei debiti.
+       * I fondi ammortamento sono rettifiche dell'attivo:
+       * non rientrano in questo blocco e mantengono il segno originale.
        */
       if (
         voce.codice === "SP_DEBITI_BANCHE_BT" ||
         voce.codice === "SP_DEBITI_BANCHE_MLT"
       ) {
-        if (importo < 0) {
+        const descrizioneConto = String(row.descrizione_conto || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase();
+        const cartaCredito = /carta\s+(?:di\s+)?credito/.test(descrizioneConto);
+        if (importo < 0 && cartaCredito) {
           if (voce.codice === "SP_DEBITI_BANCHE_BT") {
             creditiDaSaldiBancariBt += -importo;
           } else {
             creditiDaSaldiBancariMlt += -importo;
           }
           importo = 0;
+        } else {
+          importo = Math.abs(importo);
         }
       }
 
@@ -769,8 +782,8 @@ if (deleteSaldiError) {
       creditiDaSaldiBancariBt + creditiDaSaldiBancariMlt
     );
 
-    // Riclassificazione patrimoniale (non altera le voci importate):
-    // somma i saldi bancari creditori ai crediti dell'attivo corrente.
+    // Riclassificazione mirata delle carte di credito con saldo negativo:
+    // i fondi di ammortamento restano a segno negativo nell'attivo.
     const totaleAttivo = round2(
       sommaPerSezione(saldi, "stato_patrimoniale_attivo") +
         creditiDaSaldiBancari
@@ -832,8 +845,8 @@ if (deleteSaldiError) {
       ? Number(integrazione?.debiti_finanziari_mlt || 0)
       : debitiBancheMltContabili;
 
-    // Le integrazioni storiche possono essere state compilate quando
-    // il motore convertiva erroneamente i crediti bancari in debiti.
+    // Le integrazioni storiche possono aver incluso erroneamente
+    // nel debito anche il saldo negativo delle carte di credito.
     // Correggiamo SOLO quando lo scarto coincide esattamente con
     // quei saldi, senza alterare altri riparti manuali.
     const ripartoStoricoIncludeCrediti = integrazionePresente &&
