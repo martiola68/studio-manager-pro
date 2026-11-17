@@ -469,10 +469,10 @@ const righeUtili =
         }
       >();
 
-    // Crediti da singole carte di credito con saldo di segno opposto.
-    // NON convertire indiscriminatamente i debiti finanziari negativi.
-    let creditiDaSaldiBancariBt = 0;
-    let creditiDaSaldiBancariMlt = 0;
+    // Rileviamo, a fini di controllo, le partite bancarie negative.
+    // Non ne alteriamo il valore nel salvataggio dei saldi.
+    let riduzioniDebitiBancariBt = 0;
+    let riduzioniDebitiBancariMlt = 0;
 
     for (
       const row of
@@ -497,38 +497,18 @@ const righeUtili =
         );
 
       /*
-       * L'import Datev contiene saldi negativi anche in veri debiti
-       * finanziari: sono convenzioni di segno e NON crediti.
-       * Conserviamo quindi l'originaria esposizione in valore assoluto
-       * per i debiti bancari ordinari.
+       * Il segno dell'importazione viene preservato, qualunque sia
+       * la voce assegnata. Una posta negativa diminuisce la propria
+       * sezione: fondi ammortamento nell'attivo, carte nei debiti,
+       * e analogamente per tutte le altre voci.
        *
-       * Eccezione: una CARTA DI CREDITO mappata fra i debiti bancari
-       * con saldo negativo (ad es. "Carta di credito 1" -1.767,22)
-       * rappresenta una partita di segno opposto. La storniano dai
-       * debiti e la mostriamo come credito nell'attivo corrente.
-       *
-       * I fondi ammortamento sono rettifiche dell'attivo:
-       * non rientrano in questo blocco e mantengono il segno originale.
+       * Non spostiamo importi tra sezioni e non usiamo Math.abs().
        */
-      if (
-        voce.codice === "SP_DEBITI_BANCHE_BT" ||
-        voce.codice === "SP_DEBITI_BANCHE_MLT"
-      ) {
-        const descrizioneConto = String(row.descrizione_conto || "")
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .toLowerCase();
-        const cartaCredito = /carta\s+(?:di\s+)?credito/.test(descrizioneConto);
-        if (importo < 0 && cartaCredito) {
-          if (voce.codice === "SP_DEBITI_BANCHE_BT") {
-            creditiDaSaldiBancariBt += -importo;
-          } else {
-            creditiDaSaldiBancariMlt += -importo;
-          }
-          importo = 0;
-        } else {
-          importo = Math.abs(importo);
-        }
+      if (importo < 0 && voce.codice === "SP_DEBITI_BANCHE_BT") {
+        riduzioniDebitiBancariBt += -importo;
+      }
+      if (importo < 0 && voce.codice === "SP_DEBITI_BANCHE_MLT") {
+        riduzioniDebitiBancariMlt += -importo;
       }
 
       const corrente =
@@ -778,20 +758,14 @@ if (deleteSaldiError) {
      * 9. STATO PATRIMONIALE
      * =====================================================
      */
-    const creditiDaSaldiBancari = round2(
-      creditiDaSaldiBancariBt + creditiDaSaldiBancariMlt
+    // Nessuna riclassificazione automatica fra attivo e passivo:
+    // la somma algebrica dei saldi determina il valore di ogni sezione.
+    const totaleAttivo = sommaPerSezione(
+      saldi, "stato_patrimoniale_attivo"
     );
 
-    // Riclassificazione mirata delle carte di credito con saldo negativo:
-    // i fondi di ammortamento restano a segno negativo nell'attivo.
-    const totaleAttivo = round2(
-      sommaPerSezione(saldi, "stato_patrimoniale_attivo") +
-        creditiDaSaldiBancari
-    );
-
-    const attivoCorrente = round2(
-      sommaPerMacrovoce(saldi, "attivo_corrente") +
-        creditiDaSaldiBancari
+    const attivoCorrente = sommaPerMacrovoce(
+      saldi, "attivo_corrente"
     );
 
     const disponibilitaLiquide =
@@ -845,26 +819,30 @@ if (deleteSaldiError) {
       ? Number(integrazione?.debiti_finanziari_mlt || 0)
       : debitiBancheMltContabili;
 
-    // Le integrazioni storiche possono aver incluso erroneamente
-    // nel debito anche il saldo negativo delle carte di credito.
-    // Correggiamo SOLO quando lo scarto coincide esattamente con
-    // quei saldi, senza alterare altri riparti manuali.
-    const ripartoStoricoIncludeCrediti = integrazionePresente &&
-      creditiDaSaldiBancari > 0 &&
-      Math.abs(round2(
-        debitiFinanziariBtSalvati +
-        debitiFinanziariMltSalvati -
-        debitiFinanziariContabili -
-        creditiDaSaldiBancari
-      )) <= 0.01;
+    // Il riparto salvato può provenire dall'algoritmo precedente,
+    // che convertiva i saldi negativi in importi positivi.
+    // In tal caso il vecchio totale eccede quello algebrico
+    // di due volte il valore assoluto delle partite negative.
+    // Correggiamo solo questo caso riconoscibile esattamente.
+    const riduzioniDebitiBancari = round2(
+      riduzioniDebitiBancariBt + riduzioniDebitiBancariMlt
+    );
+    const scartoRiparto = round2(
+      debitiFinanziariBtSalvati + debitiFinanziariMltSalvati -
+      debitiFinanziariContabili
+    );
+    const ripartoConSegniDaRettificare =
+      integrazionePresente &&
+      riduzioniDebitiBancari > 0 &&
+      Math.abs(round2(scartoRiparto - 2 * riduzioniDebitiBancari)) <= 0.01;
 
     const debitiFinanziariBt = round2(
       debitiFinanziariBtSalvati -
-      (ripartoStoricoIncludeCrediti ? creditiDaSaldiBancariBt : 0)
+      (ripartoConSegniDaRettificare ? 2 * riduzioniDebitiBancariBt : 0)
     );
     const debitiFinanziariMlt = round2(
       debitiFinanziariMltSalvati -
-      (ripartoStoricoIncludeCrediti ? creditiDaSaldiBancariMlt : 0)
+      (ripartoConSegniDaRettificare ? 2 * riduzioniDebitiBancariMlt : 0)
     );
 
     const debitiFinanziariManuali =
