@@ -471,7 +471,7 @@ alert("Scheda AV2 salvata correttamente.");
   };
 
   const handleChiudiModello = () => {
-    router.push("/antiriciclaggio");
+    router.push(`/antiriciclaggio?societa_id=${encodeURIComponent(String(router.query.societa_id || ""))}`);
   };
 
   return (
