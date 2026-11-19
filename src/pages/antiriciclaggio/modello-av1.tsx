@@ -294,7 +294,7 @@ export default function ModelloAV1Page() {
   const tornaAlFascicolo = () => {
     const pratica = String(formData.pratica_id || (typeof pratica_id === "string" ? pratica_id : ""));
     if (!provenienzaFascicolo || !pratica) {
-      void router.push("/antiriciclaggio");
+      void router.push(`/antiriciclaggio?societa_id=${encodeURIComponent(String(formData.societa_id || societa_id || ""))}`);
       return;
     }
     const params = new URLSearchParams({ pratica_id: pratica });
