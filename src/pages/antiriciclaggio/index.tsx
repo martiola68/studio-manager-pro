@@ -61,6 +61,7 @@ type AV1Row = {
   fascicolo_completo?: boolean | null;
   fascicolo_mancanti?: string[];
   av4_firmato_presente?: boolean;
+  regola_condotta_applicabile?: boolean;
   data_prossimo_rinnovo?: string | null;
   ultimo_av7?: string | null;
 };
@@ -164,7 +165,7 @@ export default function AntiriciclaggioPage() {
     const scadenzaStatus = getScadenzaStatus(row.ScadenzaVerifica);
     if (scadenzaStatus === "expired") return "bg-red-100";
     if (scadenzaStatus === "warning") return "bg-orange-50";
-    if (!row.AV1Conferma || !row.AV2Generato || !row.AV4Generato) return "bg-red-50";
+    if (!row.AV1Conferma || (!row.regola_condotta_applicabile && (!row.AV2Generato || !row.AV4Generato))) return "bg-red-50";
     return "";
   };
 
@@ -182,14 +183,14 @@ export default function AntiriciclaggioPage() {
     if (scadenzaStatus === "expired") return { dotClass: "bg-red-500", text: "Scaduta", className: "font-bold text-red-700" };
     if (scadenzaStatus === "warning") return { dotClass: "bg-orange-500", text: "In scadenza", className: "font-semibold text-orange-600" };
     if (!row.AV1Conferma) return { dotClass: "bg-orange-500", text: "AV1 da confermare", className: "font-semibold text-orange-700" };
-    if (!row.AV2Confermato) return { dotClass: "bg-red-500", text: "AV2 da confermare", className: "font-semibold text-red-700" };
+    if (!row.regola_condotta_applicabile && !row.AV2Confermato) return { dotClass: "bg-red-500", text: "AV2 da confermare", className: "font-semibold text-red-700" };
     const av4Info = getAV4Info(row);
     // Lo stato pratica non basta a dichiarare AV4 ricevuto: il verde richiede
     // una compilazione reale del cliente oppure un caricamento manuale reale.
     const av4Ricevuto = !!row.av4_firmato_presente;
     const av4Inviato = !!(av4Info?.Av4InviatoCL || av4Info?.public_sent_at || av4Ricevuto);
-    if (!av4Inviato) return { dotClass: "bg-red-500", text: "AV4 da generare", className: "font-semibold text-red-700" };
-    if (!av4Ricevuto) return { dotClass: "bg-yellow-400", text: "AV4 inviato - in attesa", className: "font-semibold text-yellow-700" };
+    if (!row.regola_condotta_applicabile && !av4Inviato) return { dotClass: "bg-red-500", text: "AV4 da generare", className: "font-semibold text-red-700" };
+    if (!row.regola_condotta_applicabile && !av4Ricevuto) return { dotClass: "bg-yellow-400", text: "AV4 inviato - in attesa", className: "font-semibold text-yellow-700" };
     if (row.fascicolo_completo === false) return { dotClass: "bg-yellow-500", text: "Fascicolo incompleto", className: "font-semibold text-yellow-700" };
     return { dotClass: "bg-green-500", text: "Completa", className: "font-semibold text-green-700" };
   };
@@ -199,6 +200,7 @@ export default function AntiriciclaggioPage() {
     : "border-2 border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]";
 
   const getAV4IconBorderClass = (row: AV1Row) => {
+    if (row.regola_condotta_applicabile) return "border-2 border-sky-400";
     const av4Info = getAV4Info(row);
     const av4Ricevuto = !!row.av4_firmato_presente;
     const av4Inviato = !!(av4Info?.Av4InviatoCL || av4Info?.public_sent_at || av4Ricevuto);
@@ -313,11 +315,11 @@ export default function AntiriciclaggioPage() {
     const mancanti: string[] = [];
     if (!av1) mancanti.push("AV1 firmato");
     if (!regolaPresente) mancanti.push(regolaDiCondotta);
-    if (!av4) mancanti.push("AV4 firmato");
-    if (!documentoIdentita) mancanti.push("Documento identità");
-    if (isSocietaCliente && !visura) mancanti.push("Visura camerale");
-    if (!contratto) mancanti.push("Contratto professionale");
-    return { completo: mancanti.length === 0, mancanti, av4Presente: av4 };
+    if (!av1EsclusoPerRegola && !av4) mancanti.push("AV4 firmato");
+    if (!av1EsclusoPerRegola && !documentoIdentita) mancanti.push("Documento identità");
+    if (!av1EsclusoPerRegola && isSocietaCliente && !visura) mancanti.push("Visura camerale");
+    if (!av1EsclusoPerRegola && !contratto) mancanti.push("Contratto professionale");
+    return { completo: mancanti.length === 0, mancanti, av4Presente: av4, regolaCondottaApplicabile: av1EsclusoPerRegola };
   };
 
   const loadRowsBySocieta = async (societaId: string) => {
@@ -363,7 +365,7 @@ export default function AntiriciclaggioPage() {
       }));
       const rowsConFascicolo = await Promise.all(rowsBase.map(async (row) => {
         const check = await checkFascicoloDocumenti(row);
-        return { ...row, fascicolo_completo: check.completo, fascicolo_mancanti: check.mancanti, av4_firmato_presente: !!check.av4Presente };
+        return { ...row, fascicolo_completo: check.completo, fascicolo_mancanti: check.mancanti, av4_firmato_presente: !!check.av4Presente, regola_condotta_applicabile: !!check.regolaCondottaApplicabile };
       }));
       setRows(rowsConFascicolo);
     } catch (err: any) {
