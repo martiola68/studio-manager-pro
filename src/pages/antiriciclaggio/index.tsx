@@ -119,9 +119,10 @@ export default function AntiriciclaggioPage() {
     if (typeof window === "undefined") return;
     const savedUnlocked = sessionStorage.getItem(AML_SESSION_KEY);
     const savedSelected = sessionStorage.getItem(AML_SELECTED_SOCIETA_KEY);
-    if (savedSelected) setSocietaFilter(savedSelected);
+    const requestedSocieta = typeof router.query.societa_id === "string" ? router.query.societa_id : "";
+    if (requestedSocieta || savedSelected) setSocietaFilter(requestedSocieta || savedSelected);
     if (savedUnlocked) setUnlockedSocietaId(savedUnlocked);
-  }, []);
+  }, [router.isReady]);
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "-";
@@ -599,7 +600,7 @@ export default function AntiriciclaggioPage() {
 
   const handleApriAV1 = (row: AV1Row) => {
     if (!canAccessAntiriciclaggio) return;
-    if (row.id) return void router.push(`/antiriciclaggio/modello-av1?id=${row.id}&pratica_id=${row.pratica_id || ""}`);
+    if (row.id) return void router.push(`/antiriciclaggio/modello-av1?id=${row.id}&pratica_id=${row.pratica_id || ""}&societa_id=${row.societa_id || ""}`);
     if (row.pratica_id) return void router.push(`/antiriciclaggio/modello-av1?pratica_id=${row.pratica_id}&societa_id=${row.societa_id || ""}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`);
   };
 
