@@ -120,7 +120,7 @@ export default function AntiriciclaggioPage() {
     const savedUnlocked = sessionStorage.getItem(AML_SESSION_KEY);
     const savedSelected = sessionStorage.getItem(AML_SELECTED_SOCIETA_KEY);
     const requestedSocieta = typeof router.query.societa_id === "string" ? router.query.societa_id : "";
-    if (requestedSocieta || savedSelected) setSocietaFilter(requestedSocieta || savedSelected);
+    if (requestedSocieta || savedSelected) setSocietaFilter(requestedSocieta || savedSelected || "");
     if (savedUnlocked) setUnlockedSocietaId(savedUnlocked);
   }, [router.isReady]);
 
