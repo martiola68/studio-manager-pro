@@ -1149,11 +1149,11 @@ if (form.invia_altra_email && !form.email_destinatario_alternativa.trim()) {
 
  function handleChiudiModello() {
     if (!provenienzaFascicolo) {
-      void router.push("/antiriciclaggio");
+      void router.push(`/antiriciclaggio?societa_id=${encodeURIComponent(String(form.societa_id || societaIdFromQuery || ""))}`);
       return;
     }
     const pratica = form.pratica_id || praticaIdFromQuery;
-    if (!pratica) return void router.push("/antiriciclaggio");
+    if (!pratica) return void router.push(`/antiriciclaggio?societa_id=${encodeURIComponent(String(form.societa_id || societaIdFromQuery || ""))}`);
     const params = new URLSearchParams({ pratica_id: pratica });
     const cliente = form.cliente_id || clienteIdFromQuery;
     if (cliente) params.set("cliente_id", cliente);
