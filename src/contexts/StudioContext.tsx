@@ -46,6 +46,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [piano, setPiano] = useState<string | null>(null);
   const [addons, setAddons] = useState<string[]>([]);
+  const [amlLicenseActive, setAmlLicenseActive] = useState(false);
   const initializedRef = useRef(false);
   const loadInFlightRef = useRef(false);
   const loadedUserIdRef = useRef<string | null>(null);
@@ -64,6 +65,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         setStudioId(null);
         setPiano(null);
         setAddons([]);
+        setAmlLicenseActive(false);
         return;
       }
 
@@ -91,6 +93,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         setStudioId(null);
         setPiano(null);
         setAddons([]);
+        setAmlLicenseActive(false);
         return;
       }
 
@@ -105,17 +108,21 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         .limit(1)
         .maybeSingle();
 
-      if (licenzaError) {
-        console.error("[StudioContext] Errore caricamento licenza:", licenzaError);
-        if (initialLoad) {
-          setPiano(null);
-          setAddons([]);
-        }
-        return;
-      }
+      if (licenzaError) console.error("[StudioContext] Errore lettura licenza SMP (AML indipendente):", licenzaError);
 
-      setPiano(licenza?.piano ? String(licenza.piano) : null);
-      setAddons(leggiAddons(licenza?.note));
+      setPiano(licenzaError ? null : (licenza?.piano ? String(licenza.piano) : null));
+      setAddons(licenzaError ? [] : leggiAddons(licenza?.note));
+      // La licenza AML separata è per studio; non sovrascrive mai la licenza SMP.
+      // In caso di tabella non ancora migrata o di errore, l'accesso resta negato.
+      const { data: amlLicense, error: amlError } = await db
+        .from("tbaml_licenze")
+        .select("stato,data_attivazione,data_scadenza")
+        .eq("studio_id", resolvedStudioId)
+        .eq("stato", "attivo")
+        .limit(1)
+        .maybeSingle();
+      const validExpiry = Boolean(amlLicense?.data_scadenza && amlLicense?.data_attivazione && String(amlLicense.data_attivazione) <= new Date().toISOString().slice(0,10) && String(amlLicense.data_scadenza) >= new Date().toISOString().slice(0,10));
+      setAmlLicenseActive(!amlError && validExpiry);
     } catch (error) {
       console.error("[StudioContext] Impossibile risolvere il tenant:", error);
       if (initialLoad) {
@@ -141,6 +148,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         setStudioId(null);
         setPiano(null);
         setAddons([]);
+        setAmlLicenseActive(false);
         setIsLoading(false);
         return;
       }
@@ -159,14 +167,14 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
 
   const hasModule = useCallback((modulo: ModuloLicenza) => {
     const p = normalizzaPiano(piano);
+    if (modulo === "aml") return amlLicenseActive;
     if (p.includes("full")) return true;
-    if (modulo === "aml") return isAmlStandalonePlan(p) || addons.includes("aml");
     if (modulo === "revisione") return addons.includes("revisione") || addons.includes("revisione_controllo");
     if (modulo === "controllo_gestione") return addons.includes("controllo_gestione");
     return false;
-  }, [piano, addons]);
+  }, [piano, addons, amlLicenseActive]);
 
-  const amlOnly = isAmlStandalonePlan(piano);
+  const amlOnly = amlLicenseActive && !piano;
   const value = useMemo(
     () => ({ studioId, isLoading, piano, addons, amlOnly, hasModule, refreshStudio: loadStudio }),
     [studioId, isLoading, piano, addons, amlOnly, hasModule, loadStudio]

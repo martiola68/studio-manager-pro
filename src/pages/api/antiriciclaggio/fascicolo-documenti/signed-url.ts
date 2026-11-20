@@ -1,3 +1,4 @@
+import { checkAmlLicense } from "@/lib/aml/checkLicense";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -43,6 +44,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error("Errore recupero studio per signed URL fascicolo:", utenteError);
       return res.status(403).json({ error: "Studio non disponibile per l'utente." });
     }
+
+    const license=await checkAmlLicense(String(utente.studio_id));
+    if(!license.allowed)return res.status(403).json({error:license.reason});
 
     const { data: documento, error: documentoError } = await supabaseAdmin
       .from("tbAVFascicoliDocumenti")

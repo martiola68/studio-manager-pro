@@ -1,3 +1,4 @@
+import { getAuthorizedAmlStudio } from "@/lib/aml/checkLicense";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
@@ -30,6 +31,8 @@ export default async function handler(
       });
     }
 
+    const allowedStudio=await getAuthorizedAmlStudio(req);
+    if(!allowedStudio)return res.status(403).json({ok:false,error:"Licenza AML o autenticazione mancante"});
     const { societaId, password } = req.body || {};
 
     if (!societaId || !password) {
@@ -86,10 +89,11 @@ export default async function handler(
       return res.status(404).json({ ok: false, error: "Società non trovata" });
     }
 
-    if (authUserId && data.studio_id !== authStudioId) {
+    if(data.studio_id !== allowedStudio.studioId) {
       return res.status(403).json({ ok: false, error: "Soggetto non associato allo studio" });
     }
 
+    if (!authUserId) return res.status(401).json({ok:false,error:"Accesso autenticato richiesto"});
     if (!data.antiriciclaggio_enabled) {
       return res.status(200).json({ ok: true });
     }

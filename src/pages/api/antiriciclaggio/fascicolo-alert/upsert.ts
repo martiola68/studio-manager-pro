@@ -1,3 +1,4 @@
+import { getAuthorizedAmlStudio } from "@/lib/aml/checkLicense";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
@@ -25,6 +26,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    const authStudio=await getAuthorizedAmlStudio(req);
+    if(!authStudio)return res.status(403).json({error:"Licenza AML o autenticazione non valida"});
     const {
       av1_id,
       pratica_id,
@@ -38,10 +41,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: "Manca av1_id o pratica_id" });
     }
 
-    const studioId = req.headers["x-studio-id"];
 
     let finalStudioId: string | null = null;
-    let finalClienteId: string | null = cliente_id || null;
+    let finalClienteId: string | null = null;
     let finalSocietaId: string | null = null;
 
     if (pratica_id) {
@@ -52,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .maybeSingle();
 
       finalStudioId = pratica?.studio_id || null;
-      finalClienteId = finalClienteId || pratica?.cliente_id || null;
+      finalClienteId = pratica?.cliente_id || null;
       finalSocietaId = pratica?.societa_id || null;
     }
 
@@ -64,11 +66,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .maybeSingle();
 
       finalStudioId = av1?.studio_id || null;
-      finalClienteId = finalClienteId || av1?.cliente_id || null;
+      finalClienteId = av1?.cliente_id || null;
     }
 
-    if (!finalStudioId) {
-      return res.status(400).json({ error: "Studio non trovato" });
+    if (!finalStudioId || finalStudioId !== authStudio.studioId) {
+      return res.status(403).json({ error: "Fascicolo non appartenente allo studio autorizzato" });
     }
 
     const payload = {
@@ -91,13 +93,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from("tbAVFascicoliAlert")
       .select("id")
       .eq(matchColumn, matchValue)
+      .eq("studio_id", authStudio.studioId)
       .maybeSingle();
 
     if (existing?.id) {
       const { error } = await supabaseAdmin
         .from("tbAVFascicoliAlert")
         .update(payload)
-        .eq("id", existing.id);
+        .eq("id", existing.id)
+        .eq("studio_id",authStudio.studioId);
 
       if (error) throw error;
     } else {

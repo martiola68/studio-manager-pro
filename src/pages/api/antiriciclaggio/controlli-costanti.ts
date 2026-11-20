@@ -1,3 +1,4 @@
+import { checkAmlLicense } from "@/lib/aml/checkLicense";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { verifyAV7AccessProof } from "@/lib/aml/av7AccessProof";
@@ -49,6 +50,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (userError || !user?.studio_id) return res.status(403).json({ error: "Utente attivo dello studio non disponibile" });
 
+    const authorized=await checkAmlLicense(String(user.studio_id));
+    if(!authorized.allowed)return res.status(403).json({error:authorized.reason});
     const praticaId = String((req.method === "GET" ? req.query.pratica_id : req.body?.pratica_id) || "").trim();
     if (!praticaId) return res.status(400).json({ error: "Pratica obbligatoria" });
 

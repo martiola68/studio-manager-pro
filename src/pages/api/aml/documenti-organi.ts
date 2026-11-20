@@ -1,3 +1,4 @@
+import { checkAmlLicense } from "@/lib/aml/checkLicense";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendRichiestaDocumentoRappresentante } from "@/services/rappresentantiDocumentiService";
@@ -24,6 +25,8 @@ export default async function handler(req:NextApiRequest,res:NextApiResponse){
   let u=await db.from("tbutenti").select("id,studio_id").eq("user_id",user.id).eq("attivo",true).limit(1).maybeSingle();
   if(!u.data&&!u.error&&user.email)u=await db.from("tbutenti").select("id,studio_id").ilike("email",user.email).eq("attivo",true).limit(1).maybeSingle();
   if(u.error||!u.data?.studio_id)return res.status(403).json({error:"Studio non disponibile"});
+  const entitlement=await checkAmlLicense(String(u.data.studio_id));
+  if(!entitlement.allowed)return res.status(403).json({error:entitlement.reason});
   const studioId=String(u.data.studio_id), clienteId=str(req.method==="GET"?req.query.cliente_id:req.body?.cliente_id);
   if(!clienteId)return res.status(400).json({error:"Cliente mancante"});
   const cliente=await db.from("tbclienti").select("id").eq("studio_id",studioId).eq("id",clienteId).maybeSingle();
